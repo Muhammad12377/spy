@@ -16,9 +16,9 @@ public sealed class SupabaseService : IDisposable
     private static string SupabaseUrl =>
         Preferences.Get("supabase_url", "https://zlhcseovfjilzgxdkskw.supabase.co");
 
-    private static string AnonKey =>
-        Preferences.Get("supabase_anon_key",
-            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpsaGNzZW92ZmppbHpneGRrc2t3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NTkxNjQsImV4cCI6MjA5NjIzNTE2NH0.tb8oMqMAHMoknDaY_1-GVvONYcG9YrjbnBcJFSJD0SI");
+    private static string ServiceKey =>
+        Preferences.Get("supabase_service_key",
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpsaGNzZW92ZmppbHpneGRrc2t3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDY1OTE2NCwiZXhwIjoyMDk2MjM1MTY0fQ.g2Hi8K0-dyOK9rqp20uYUVRwtAAyHQNrUiu7kTqL0tM");
 
     private static string DeviceSerial =>
         Preferences.Get("device_serial", string.Empty);
@@ -30,55 +30,46 @@ public sealed class SupabaseService : IDisposable
             BaseAddress = new Uri(SupabaseUrl.TrimEnd('/') + "/rest/v1/"),
             Timeout = TimeSpan.FromSeconds(15)
         };
-        _http.DefaultRequestHeaders.Add("apikey", AnonKey);
+        _http.DefaultRequestHeaders.Add("apikey", ServiceKey);
         _http.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", AnonKey);
+            new AuthenticationHeaderValue("Bearer", ServiceKey);
     }
 
     /// <summary>
-    /// تسجيل الجهاز: يستدعي register_device() RPC — SECURITY DEFINER (يتجاوز RLS)
+    /// تسجيل الجهاز: إدراج مباشر في جدول devices (service_role يتجاوز RLS)
     /// </summary>
     public async Task<bool> RegisterDeviceAsync(string deviceSerial)
     {
         try
         {
+            var deviceToken = Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
+
             var payload = new
             {
-                p_device_serial = deviceSerial,
-                p_device_name = DeviceInfo.Name,
-                p_manufacturer = DeviceInfo.Manufacturer,
-                p_model = DeviceInfo.Model,
-                p_os_version = $"{DeviceInfo.Platform} {DeviceInfo.VersionString}",
-                p_public_key = Preferences.Get("encryption_key", string.Empty)
+                device_serial = deviceSerial,
+                device_token = deviceToken,
+                device_name = DeviceInfo.Name,
+                manufacturer = DeviceInfo.Manufacturer,
+                model = DeviceInfo.Model,
+                os_version = $"{DeviceInfo.Platform} {DeviceInfo.VersionString}",
+                is_active = true,
+                is_stealth = false
             };
 
             var json = JsonConvert.SerializeObject(payload);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
-            var response = await _http.PostAsync("rpc/register_device", content);
+            var response = await _http.PostAsync("devices", content);
 
             if (response.IsSuccessStatusCode)
             {
-                var body = await response.Content.ReadAsStringAsync();
-                // الـ RPC يرجع JSON array: [{"device_token":"..."}]
-                var tokens = JsonConvert.DeserializeObject<List<Dictionary<string, string>>>(body);
-                var token = tokens?.FirstOrDefault()?.GetValueOrDefault("device_token");
-
-                if (!string.IsNullOrEmpty(token))
-                {
-                    Preferences.Set("device_token", token);
-                    Preferences.Set("device_serial", deviceSerial);
-                    System.Diagnostics.Debug.WriteLine(
-                        $"[Supabase] Registered OK, token={token[..8]}...");
-                    return true;
-                }
-            }
-            else
-            {
-                var err = await response.Content.ReadAsStringAsync();
-                System.Diagnostics.Debug.WriteLine(
-                    $"[Supabase] Register failed ({response.StatusCode}): {err}");
+                Preferences.Set("device_token", deviceToken);
+                Preferences.Set("device_serial", deviceSerial);
+                System.Diagnostics.Debug.WriteLine($"[Supabase] Registered OK, token={deviceToken[..8]}...");
+                return true;
             }
 
+            var err = await response.Content.ReadAsStringAsync();
+            System.Diagnostics.Debug.WriteLine($"[Supabase] Register failed ({response.StatusCode}): {err}");
             return false;
         }
         catch (Exception ex)
@@ -268,8 +259,8 @@ public sealed class SupabaseService : IDisposable
             {
                 Content = content
             };
-            request.Headers.Add("apikey", AnonKey);
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", AnonKey);
+            request.Headers.Add("apikey", ServiceKey);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ServiceKey);
 
             var response = await _http.SendAsync(request);
             return response.IsSuccessStatusCode ? storageUrl : null;
