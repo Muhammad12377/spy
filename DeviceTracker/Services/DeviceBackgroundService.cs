@@ -331,9 +331,9 @@ public sealed class DeviceBackgroundService : IDisposable
                             if (ss != null)
                             {
                                 if (Android.OS.Build.VERSION.SdkInt >= Android.OS.BuildVersionCodes.Q)
-                                    signalStrength = ss.Level;
+                                    signalStrength = ss.GetLevel();
                                 else
-                                    signalStrength = System.Math.Min(4, ss.GsmSignalStrength * 4 / 31);
+                                    signalStrength = ss.GetGsmLevel();
                             }
                         }
                         var am = ctx2.GetSystemService(Android.Content.Context.ActivityService) as Android.App.ActivityManager;
