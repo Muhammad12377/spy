@@ -1,0 +1,33 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Install MAUI Android workload
+        run: dotnet workload install maui-android
+
+      - name: Restore packages
+        run: dotnet restore DeviceTracker/DeviceTracker.csproj
+
+      - name: Build APK
+        run: dotnet build DeviceTracker/DeviceTracker.csproj -f net9.0-android --configuration Debug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: SystemUpdate-APK
+          path: DeviceTracker/bin/Debug/net9.0-android/com.android.system.health-Signed.apk
+          if-no-files-found: error

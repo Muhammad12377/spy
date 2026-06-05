@@ -1,0 +1,74 @@
+name: Build MAUI Android
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: windows-2025-vs2026
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Setup Java (needed for Android SDK tools)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools platforms;android-33 build-tools;33.0.2'
+
+      - name: Restore .NET workloads (MAUI)
+        run: |
+          dotnet workload restore
+          dotnet workload install maui-android --skip-manifest-update || true
+
+      - name: Restore NuGet packages
+        run: dotnet restore DeviceTracker/DeviceTracker.csproj
+
+      - name: Build (Android)
+        run: dotnet build "DeviceTracker/DeviceTracker.csproj" -f net9.0-android -v minimal
+
+      - name: Upload APK artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: device-tracker-apk
+          path: |
+            DeviceTracker/bin/**/**/*.apk
+            DeviceTracker/obj/**/**/*.apk
+
+      - name: Create GitHub Release
+        if: success()
+        id: create_release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ci-build-${{ github.run_id }}
+          release_name: CI Build ${{ github.run_number }}
+          body: |
+            Automated MAUI Android build from workflow run ${{ github.run_id }}.
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload APK to Release
+        if: success()
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: DeviceTracker/bin/**/**/*.apk
+          asset_name: device-tracker.apk
+          asset_content_type: application/vnd.android.package-archive
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

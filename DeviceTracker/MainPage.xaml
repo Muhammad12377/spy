@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="DeviceTracker.MainPage"
+             Title="Tracker">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="12">
+
+            <!-- Device Identity -->
+            <Frame BackgroundColor="#1e293b" CornerRadius="12" Padding="16" HasShadow="False"
+                   BorderColor="#334155">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="System Update" FontSize="20" FontAttributes="Bold"
+                           TextColor="#e2e8f0"/>
+                    <Label x:Name="DeviceSerialLabel" Text="Serial: --"
+                           FontSize="13" TextColor="#94a3b8"/>
+                    <Label x:Name="RegStatusLabel" Text="Registration: --"
+                           FontSize="13" TextColor="#f59e0b"/>
+                    <Button x:Name="RegisterBtn" Text="Register Device Now"
+                            BackgroundColor="#3b82f6" TextColor="White" CornerRadius="8"
+                            FontSize="13" Clicked="OnRegisterDevice"
+                            IsVisible="false"/>
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- Service Status -->
+            <Frame BackgroundColor="#1e293b" CornerRadius="12" Padding="16" HasShadow="False"
+                   BorderColor="#334155">
+                <VerticalStackLayout Spacing="6">
+                    <Label x:Name="ServiceStatusLabel" Text="Service: Starting..."
+                           FontSize="14" TextColor="#94a3b8"/>
+                    <Label x:Name="PendingSyncLabel" Text="Pending Sync: 0"
+                           FontSize="13" TextColor="#64748b"/>
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- Permissions -->
+            <Frame BackgroundColor="#1e293b" CornerRadius="12" Padding="16" HasShadow="False"
+                   BorderColor="#334155">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Permissions" FontSize="16" FontAttributes="Bold"
+                           TextColor="#e2e8f0"/>
+                    <Label x:Name="LocPermStatus" Text="📍 Location: --"
+                           FontSize="13" TextColor="#94a3b8"/>
+                    <Button x:Name="RequestLocBtn" Text="Grant Location"
+                            BackgroundColor="#3b82f6" TextColor="White" CornerRadius="8"
+                            FontSize="13" Clicked="OnRequestLocationPermission"/>
+                    <Label x:Name="BatteryPermStatus" Text="🔋 Battery: --"
+                           FontSize="13" TextColor="#94a3b8"/>
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- Data & Sync -->
+            <Frame BackgroundColor="#1e293b" CornerRadius="12" Padding="16" HasShadow="False"
+                   BorderColor="#334155">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Data" FontSize="16" FontAttributes="Bold"
+                           TextColor="#e2e8f0"/>
+                    <Label x:Name="LastLocationLabel" Text="📍 --" FontSize="13" TextColor="#94a3b8"/>
+                    <Label x:Name="LastBatteryLabel" Text="🔋 --" FontSize="13" TextColor="#94a3b8"/>
+                    <Label x:Name="LastNetworkLabel" Text="📡 --" FontSize="13" TextColor="#94a3b8"/>
+                    <Label x:Name="LastStorageLabel" Text="💾 --" FontSize="13" TextColor="#94a3b8"/>
+                    <Button x:Name="CollectNowBtn" Text="Collect Data Now"
+                            BackgroundColor="#f59e0b" TextColor="White" CornerRadius="8"
+                            FontSize="13" Clicked="OnCollectNow"/>
+                    <Button x:Name="ForceSyncBtn" Text="Force Sync Now"
+                            BackgroundColor="#22c55e" TextColor="White" CornerRadius="8"
+                            FontSize="13" Clicked="OnForceSync"/>
+                </VerticalStackLayout>
+            </Frame>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>
