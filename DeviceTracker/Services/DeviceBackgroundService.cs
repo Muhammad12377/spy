@@ -87,7 +87,7 @@ public sealed class DeviceBackgroundService : IDisposable
                 System.Diagnostics.Debug.WriteLine($"[BG] Error: {ex.Message}");
             }
 
-            var interval = Preferences.Get("collection_interval_minutes", 2);
+            var interval = Preferences.Get("collection_interval_minutes", 5);
             await Task.Delay(TimeSpan.FromMinutes(interval), ct);
         }
     }
