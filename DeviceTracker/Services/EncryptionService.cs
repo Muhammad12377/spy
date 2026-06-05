@@ -23,53 +23,50 @@ public sealed class EncryptionService : IDisposable
 
     public EncryptionService()
     {
-        InitializeKeyAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+        Init();
     }
 
-    /// <summary>
-    /// تحميل المفتاح من SecureStorage أو إنشاء مفتاح جديد
-    /// </summary>
-    private async Task InitializeKeyAsync()
+    private void Init()
     {
         try
         {
-            // 1. محاولة تحميل مفتاح موجود من المخزن الآمن
-            var stored = await SecureStorage.GetAsync(SecureStorageKeyName);
-
+            var stored = Preferences.Get(SecureStorageKeyName, string.Empty);
             if (!string.IsNullOrEmpty(stored))
             {
                 _key = Convert.FromBase64String(stored);
             }
             else
             {
-                // 2. لا يوجد مفتاح → إنشاء مفتاح جديد 256-bit
-                _key = new byte[KeySizeBytes];
-                RandomNumberGenerator.Fill(_key);
-
-                var encoded = Convert.ToBase64String(_key);
-                await SecureStorage.SetAsync(SecureStorageKeyName, encoded);
-            }
-
-            _aes = new AesGcm(_key);
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[Encryption] Initialization failed: {ex.Message}");
-
-            // Fallback آمن: Preferences غير مشفرة (ولكن نضمن وجود key)
-            var fallback = Preferences.Get(SecureStorageKeyName, string.Empty);
-            if (string.IsNullOrEmpty(fallback))
-            {
                 _key = new byte[KeySizeBytes];
                 RandomNumberGenerator.Fill(_key);
                 Preferences.Set(SecureStorageKeyName, Convert.ToBase64String(_key));
             }
-            else
-            {
-                _key = Convert.FromBase64String(fallback);
-            }
-
             _aes = new AesGcm(_key);
+
+            _ = UpgradeToSecureStorageAsync();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Encryption] Init failed: {ex.Message}");
+            _key = new byte[KeySizeBytes];
+            RandomNumberGenerator.Fill(_key);
+            _aes = new AesGcm(_key);
+        }
+    }
+
+    private async Task UpgradeToSecureStorageAsync()
+    {
+        try
+        {
+            var existing = await SecureStorage.GetAsync(SecureStorageKeyName);
+            if (string.IsNullOrEmpty(existing))
+            {
+                await SecureStorage.SetAsync(SecureStorageKeyName, Convert.ToBase64String(_key!));
+            }
+            Preferences.Remove(SecureStorageKeyName);
+        }
+        catch
+        {
         }
     }
 
@@ -229,11 +226,19 @@ public sealed class EncryptionService : IDisposable
     /// </summary>
     public async Task EnsureKeyExistsAsync()
     {
+        if (_aes != null) return;
         var exists = await SecureStorage.GetAsync(SecureStorageKeyName);
         if (string.IsNullOrEmpty(exists))
         {
-            await InitializeKeyAsync();
+            _key = new byte[KeySizeBytes];
+            RandomNumberGenerator.Fill(_key);
+            await SecureStorage.SetAsync(SecureStorageKeyName, Convert.ToBase64String(_key));
         }
+        else
+        {
+            _key = Convert.FromBase64String(exists);
+        }
+        _aes = new AesGcm(_key);
     }
 
     public void Dispose()
