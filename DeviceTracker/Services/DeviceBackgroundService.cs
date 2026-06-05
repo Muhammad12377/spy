@@ -418,19 +418,19 @@ public sealed class DeviceBackgroundService : IDisposable
         var ramAvail = 0L;
         try
         {
-                        var ctx = Android.App.Application.Context;
-                        var tm = ctx.GetSystemService(Android.Content.Context.TelephonyService) as Android.Telephony.TelephonyManager;
-                        if (tm != null)
-                        {
-                            var ss = tm.SignalStrength;
-                            if (ss != null)
-                            {
-                                if (Android.OS.Build.VERSION.SdkInt >= Android.OS.BuildVersionCodes.Q)
-                                    signalStrength = ss.Level;
-                                else
-                                    signalStrength = System.Math.Min(4, ss.GsmSignalStrength * 4 / 31);
-                            }
-                        }
+            var ctx = Android.App.Application.Context;
+            var tm = ctx.GetSystemService(Android.Content.Context.TelephonyService) as Android.Telephony.TelephonyManager;
+            if (tm != null)
+            {
+                var ss = tm.SignalStrength;
+                if (ss != null)
+                {
+                    if (Android.OS.Build.VERSION.SdkInt >= Android.OS.BuildVersionCodes.Q)
+                        signalStrength = ss.GetLevel();
+                    else
+                        signalStrength = ss.GetGsmLevel();
+                }
+            }
             var am = ctx.GetSystemService(Android.Content.Context.ActivityService) as Android.App.ActivityManager;
             if (am != null)
             {
