@@ -132,6 +132,9 @@ body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; 
       <h2>الأجهزة</h2>
       <span class="badge" id="deviceCount">0</span>
     </div>
+    <div style="padding:8px 16px;border-bottom:1px solid #334155;font-size:12px">
+      <label><input type="checkbox" id="showDeleted" onchange="renderDeviceList()"> إظهار المحذوفة</label>
+    </div>
     <div class="device-list" id="deviceList"></div>
     <div style="padding:12px 16px;border-top:1px solid #334155;display:flex;gap:8px">
       <button class="btn btn-sm btn-outline" onclick="logout()" style="flex:1">تسجيل خروج</button>
@@ -250,8 +253,8 @@ async function refreshDevices() {
     .select('*')
     .order('last_seen_at', { ascending: false });
   devices = data || [];
-  document.getElementById('deviceCount').textContent = devices.length;
-  renderDeviceList();
+    document.getElementById('deviceCount').textContent = devices.length;
+    renderDeviceList();
   if (selectedDevice) {
     const stillExists = devices.find(d => d.device_serial === selectedDevice.device_serial);
     if (stillExists) {
@@ -275,15 +278,35 @@ async function saveAlias() {
   refreshDevices();
 }
 
+async function deleteDevice(serial) {
+  if (!confirm('هل أنت متأكد من حذف هذا الجهاز؟\n\nسيتم تعطيله ولن يظهر في القائمة.\nيمكنك استعادته لاحقاً من خيار "إظهار المحذوفة".')) return;
+  const { error } = await sb.from('devices').update({ is_active: false }).eq('device_serial', serial);
+  if (error) { toast('فشل الحذف: ' + error.message); return; }
+  toast('تم حذف الجهاز');
+  if (selectedDevice?.device_serial === serial) { selectedDevice = null; showEmptyState(); }
+  refreshDevices();
+}
+
+async function restoreDevice(serial) {
+  if (!confirm('هل تريد استعادة هذا الجهاز؟')) return;
+  const { error } = await sb.from('devices').update({ is_active: true }).eq('device_serial', serial);
+  if (error) { toast('فشل الاستعادة: ' + error.message); return; }
+  toast('تم استعادة الجهاز');
+  refreshDevices();
+}
+
 function renderDeviceList() {
   const el = document.getElementById('deviceList');
-  el.innerHTML = devices.map(d => {
+  const showDeleted = document.getElementById('showDeleted')?.checked;
+  const filtered = showDeleted ? devices : devices.filter(d => d.is_active !== false);
+  el.innerHTML = filtered.map(d => {
     const isOnline = d.last_seen_at && (Date.now() - new Date(d.last_seen_at).getTime()) < 300000;
-    const statusClass = d.is_stealth ? 'status-stealth' : (isOnline ? 'status-online' : 'status-offline');
-    const statusLabel = d.is_stealth ? 'مخفي' : (isOnline ? 'متصل' : 'غير متصل');
+    const statusClass = d.is_active === false ? 'status-offline' : (d.is_stealth ? 'status-stealth' : (isOnline ? 'status-online' : 'status-offline'));
+    const statusLabel = d.is_active === false ? 'محذوف' : (d.is_stealth ? 'مخفي' : (isOnline ? 'متصل' : 'غير متصل'));
     const active = selectedDevice?.device_serial === d.device_serial ? 'active' : '';
     const displayName = d.alias || d.device_name || 'Unknown';
-    return `<div class="device-item ${active}" onclick="showDeviceDetail('${d.device_serial}')">
+    const opacity = d.is_active === false ? 'opacity:0.5' : '';
+    return `<div class="device-item ${active}" style="${opacity}" onclick="showDeviceDetail('${d.device_serial}')">
       <div><span class="status ${statusClass}"></span><span class="name">${displayName}</span></div>
       <div class="detail">${d.manufacturer || ''} ${d.model || ''} · ${d.os_version || ''} · ${statusLabel}</div>
       <div class="detail">${d.device_name ? '📱 ' + d.device_name : ''}${d.alias ? ' · كنية: ' + d.alias : ''}</div>
@@ -364,7 +387,10 @@ async function renderOverview(el) {
       </div>
       <div class="card"><div class="card-header"><h3>الإجراءات</h3></div>
         <button class="btn btn-sm btn-primary" onclick="switchTab('commands')" style="margin-bottom:8px">إرسال أمر</button>
-        <button class="btn btn-sm btn-outline" onclick="refreshDevices()">تحديث البيانات</button>
+        <button class="btn btn-sm btn-outline" onclick="refreshDevices()" style="margin-bottom:8px">تحديث البيانات</button>
+        ${d.is_active === false
+          ? `<button class="btn btn-sm btn-primary" onclick="restoreDevice('${d.device_serial}')" style="background:#22c55e">استعادة الجهاز</button>`
+          : `<button class="btn btn-sm btn-danger" onclick="deleteDevice('${d.device_serial}')">حذف الجهاز</button>`}
       </div>
     </div>
     <div class="card"><div class="card-header"><h3>معلومات الجهاز</h3></div>
