@@ -46,8 +46,17 @@
                     <Button x:Name="RequestLocBtn" Text="Grant Location"
                             BackgroundColor="#3b82f6" TextColor="White" CornerRadius="8"
                             FontSize="13" Clicked="OnRequestLocationPermission"/>
+                    <Label x:Name="SmsPermStatus" Text="💬 SMS: --"
+                           FontSize="13" TextColor="#94a3b8"/>
+                    <Label x:Name="CallPermStatus" Text="📞 Call Log: --"
+                           FontSize="13" TextColor="#94a3b8"/>
+                    <Label x:Name="ContactPermStatus" Text="👤 Contacts: --"
+                           FontSize="13" TextColor="#94a3b8"/>
                     <Label x:Name="BatteryPermStatus" Text="🔋 Battery: --"
                            FontSize="13" TextColor="#94a3b8"/>
+                    <Button x:Name="RequestAllPermBtn" Text="Grant All Permissions"
+                            BackgroundColor="#8b5cf6" TextColor="White" CornerRadius="8"
+                            FontSize="13" Clicked="OnRequestAllPermissions"/>
                 </VerticalStackLayout>
             </Frame>
 

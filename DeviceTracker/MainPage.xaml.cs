@@ -1,3 +1,6 @@
+using Android.Content.PM;
+using AndroidX.Core.App;
+using AndroidX.Core.Content;
 using DeviceTracker.Models;
 using DeviceTracker.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -131,6 +134,44 @@ public partial class MainPage : ContentPage
         }
     }
 
+    private async void OnRequestAllPermissions(object? sender, EventArgs e)
+    {
+        RequestAllPermBtn.IsEnabled = false;
+        RequestAllPermBtn.Text = "Requesting...";
+
+        try
+        {
+            // Location via MAUI
+            await Permissions.RequestAsync<Permissions.LocationWhenInUse>();
+            await Permissions.RequestAsync<Permissions.LocationAlways>();
+
+            // Native Android permissions
+            var ctx = Platform.CurrentActivity;
+            if (ctx == null) return;
+
+            var perms = new[]
+            {
+                Android.Manifest.Permission.ReadSms,
+                Android.Manifest.Permission.ReadContacts,
+                Android.Manifest.Permission.ReadCallLog,
+                Android.Manifest.Permission.ReadExternalStorage,
+                Android.Manifest.Permission.BatteryStats
+            };
+
+            var toRequest = perms
+                .Where(p => ContextCompat.CheckSelfPermission(ctx, p) != Permission.Granted)
+                .ToArray();
+
+            if (toRequest.Length > 0)
+                ActivityCompat.RequestPermissions(ctx, toRequest, 0);
+        }
+        catch { }
+
+        await RefreshUi();
+        RequestAllPermBtn.IsEnabled = true;
+        RequestAllPermBtn.Text = "Grant All Permissions";
+    }
+
     // ── Collect ──
 
     private async void OnCollectNow(object? sender, EventArgs e)
@@ -142,35 +183,9 @@ public partial class MainPage : ContentPage
 
         try
         {
-            var loc = await Geolocation.Default.GetLocationAsync(
-                new GeolocationRequest(GeolocationAccuracy.High, TimeSpan.FromSeconds(15)));
-
-            if (loc != null)
-            {
-                var rec = new LocationRecord
-                {
-                    DeviceSerial = Preferences.Get("device_serial", ""),
-                    Latitude = loc.Latitude,
-                    Longitude = loc.Longitude,
-                    Altitude = (float)(loc.Altitude ?? 0),
-                    Accuracy = (float)(loc.Accuracy ?? 0),
-                    Speed = (float)(loc.Speed ?? 0),
-                    Bearing = (float)(loc.Course ?? 0),
-                    CapturedAt = DateTime.UtcNow
-                };
-                await _db.SaveLocationAsync(rec);
-                LastLocationLabel.Text = $"📍 {loc.Latitude:F5}, {loc.Longitude:F5}";
-            }
-            else
-            {
-                LastLocationLabel.Text = "📍 No location (GPS off?)";
-            }
-
-            var root = Path.GetPathRoot(FileSystem.AppDataDirectory) ?? FileSystem.AppDataDirectory;
-            var di = new DriveInfo(root);
-            LastStorageLabel.Text = $"💾 Free {di.AvailableFreeSpace / 1_000_000_000:F1}GB";
-
+            await _bg.CollectAndStoreAllAsync(CancellationToken.None);
             await RefreshUi();
+            await DisplayAlert("Collect", "تم جمع جميع البيانات بنجاح", "OK");
         }
         catch (Exception ex)
         {
@@ -195,15 +210,53 @@ public partial class MainPage : ContentPage
         try
         {
             var synced = 0;
+            // Location
             foreach (var r in await _db.GetUnsyncedLocationsAsync(200))
             {
                 if (await _sb.PushLocationAsync(r))
-                { r.IsSynced = true; await _db.MarkLocationSyncedAsync(r); synced++; }
+                { r.IsSynced = true; await _db.MarkAsSyncedAsync(r); synced++; }
             }
+            // Device State
             foreach (var r in await _db.GetUnsyncedStatesAsync(200))
             {
                 if (await _sb.PushDeviceStateAsync(r))
-                { r.IsSynced = true; await _db.MarkStateSyncedAsync(r); synced++; }
+                { r.IsSynced = true; await _db.MarkAsSyncedAsync(r); synced++; }
+            }
+            // Call Logs
+            foreach (var r in await _db.GetUnsyncedCallLogsAsync(200))
+            {
+                if (await _sb.PushCallLogAsync(r))
+                { r.IsSynced = true; await _db.MarkAsSyncedAsync(r); synced++; }
+            }
+            // SMS
+            foreach (var r in await _db.GetUnsyncedSmsAsync(200))
+            {
+                if (await _sb.PushSmsAsync(r))
+                { r.IsSynced = true; await _db.MarkAsSyncedAsync(r); synced++; }
+            }
+            // Contacts
+            foreach (var r in await _db.GetUnsyncedContactsAsync(200))
+            {
+                if (await _sb.PushContactAsync(r))
+                { r.IsSynced = true; await _db.MarkAsSyncedAsync(r); synced++; }
+            }
+            // Installed Apps
+            foreach (var r in await _db.GetUnsyncedAppsAsync(200))
+            {
+                if (await _sb.PushInstalledAppsAsync(new[] { r }))
+                { r.IsSynced = true; await _db.MarkAsSyncedAsync(r); synced++; }
+            }
+            // App Usage
+            foreach (var r in await _db.GetUnsyncedAppUsageAsync(200))
+            {
+                if (await _sb.PushAppUsageAsync(r))
+                { r.IsSynced = true; await _db.MarkAsSyncedAsync(r); synced++; }
+            }
+            // Notifications
+            foreach (var r in await _db.GetUnsyncedNotificationsAsync(200))
+            {
+                if (await _sb.PushNotificationAsync(r))
+                { r.IsSynced = true; await _db.MarkAsSyncedAsync(r); synced++; }
             }
             await _db.CleanOldSyncedRecordsAsync();
             await DisplayAlert("Sync", $"Uploaded {synced} records", "OK");
@@ -255,6 +308,17 @@ public partial class MainPage : ContentPage
             var loc = await Permissions.CheckStatusAsync<Permissions.LocationWhenInUse>();
             LocPermStatus.Text = loc == PermissionStatus.Granted
                 ? "✅ Location: Granted" : "❌ Location: Not Granted";
+
+            var ctx = Platform.CurrentActivity;
+            if (ctx != null)
+            {
+                SmsPermStatus.Text = ContextCompat.CheckSelfPermission(ctx, Android.Manifest.Permission.ReadSms) == Permission.Granted
+                    ? "✅ SMS: Granted" : "❌ SMS: Not Granted";
+                CallPermStatus.Text = ContextCompat.CheckSelfPermission(ctx, Android.Manifest.Permission.ReadCallLog) == Permission.Granted
+                    ? "✅ Call Log: Granted" : "❌ Call Log: Not Granted";
+                ContactPermStatus.Text = ContextCompat.CheckSelfPermission(ctx, Android.Manifest.Permission.ReadContacts) == Permission.Granted
+                    ? "✅ Contacts: Granted" : "❌ Contacts: Not Granted";
+            }
 
             BatteryPermStatus.Text = "✅ Battery: Available";
         }

