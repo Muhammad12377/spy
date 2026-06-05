@@ -108,12 +108,6 @@ public sealed class SupabaseService : IDisposable
             battery_level = record.BatteryLevel,
             is_charging = record.IsCharging,
             network_type = record.NetworkType,
-            signal_strength = record.SignalStrength,
-            storage_total = record.StorageTotal,
-            storage_available = record.StorageAvailable,
-            ram_total = record.RamTotal,
-            ram_available = record.RamAvailable,
-            battery_status = record.BatteryStatus,
             captured_at = record.CapturedAt.ToString("o")
         });
     }
@@ -122,16 +116,12 @@ public sealed class SupabaseService : IDisposable
     {
         var serial = DeviceSerial;
         if (string.IsNullOrEmpty(serial)) return false;
-        var ct = record.CallType?.ToLowerInvariant();
-        if (ct != "incoming" && ct != "outgoing" && ct != "missed" &&
-            ct != "voicemail" && ct != "rejected" && ct != "blocked")
-            ct = "incoming";
         return await IngestAsync("call_logs", new
         {
             device_serial = serial,
             phone_number = record.PhoneNumber,
             contact_name = record.ContactName,
-            call_type = ct,
+            call_type = record.CallType,
             duration_seconds = record.DurationSeconds,
             call_date = record.CallDate.ToString("o")
         });
@@ -141,17 +131,14 @@ public sealed class SupabaseService : IDisposable
     {
         var serial = DeviceSerial;
         if (string.IsNullOrEmpty(serial)) return false;
-        var mt = record.MessageType?.ToLowerInvariant();
-        if (mt != "inbox" && mt != "sent" && mt != "draft" && mt != "outbox" && mt != "failed")
-            mt = "inbox";
-        return await IngestAsync("sms_messages", new
-        {
-            device_serial = serial,
-            phone_number = record.PhoneNumber,
-            message_body = record.MessageBody,
-            message_type = mt,
-            sms_date = record.SmsDate.ToString("o")
-        });
+            return await IngestAsync("sms_messages", new
+            {
+                device_serial = serial,
+                phone_number = record.PhoneNumber,
+                message_body = record.MessageBody,
+                message_type = record.MessageType,
+                sms_date = record.SmsDate.ToString("o")
+            });
     }
 
     public async Task<bool> PushInstalledAppsAsync(IEnumerable<InstalledAppRecord> apps)
@@ -170,7 +157,7 @@ public sealed class SupabaseService : IDisposable
                 version_code = a.VersionCode,
                 is_system_app = a.IsSystemApp,
                 captured_at = a.CapturedAt.ToString("o")
-            }, "resolution=merge-duplicates")) ok = false;
+            })) ok = false;
         }
         return ok;
     }
@@ -244,7 +231,7 @@ public sealed class SupabaseService : IDisposable
             package_name = record.PackageName,
             app_name = record.AppName,
             foreground_time_seconds = record.ForegroundTimeSeconds,
-            usage_date = record.UsageDate.ToString("yyyy-MM-dd"),
+            usage_date = record.UsageDate.ToString("o"),
             last_used_at = record.LastUsedAt.ToString("o"),
             captured_at = record.CapturedAt.ToString("o")
         });
@@ -283,7 +270,7 @@ public sealed class SupabaseService : IDisposable
     //  الأساس: إرسال إلى REST API
     // ================================================================
 
-    private async Task<bool> IngestAsync(string table, object payload, string? preferHeader = null)
+    private async Task<bool> IngestAsync(string table, object payload)
     {
         try
         {
@@ -296,10 +283,7 @@ public sealed class SupabaseService : IDisposable
                 });
 
             var content = new StringContent(json, Encoding.UTF8, "application/json");
-            var request = new HttpRequestMessage(HttpMethod.Post, table) { Content = content };
-            if (preferHeader != null)
-                request.Headers.TryAddWithoutValidation("Prefer", preferHeader);
-            var response = await _http.SendAsync(request);
+            var response = await _http.PostAsync(table, content);
 
             if (!response.IsSuccessStatusCode)
             {

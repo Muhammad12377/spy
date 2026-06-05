@@ -1,4 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="accessibility_service_description">Remote device control service - allows dashboard to perform screen capture and touch gestures</string>
-</resources>
