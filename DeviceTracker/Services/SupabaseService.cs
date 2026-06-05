@@ -24,11 +24,11 @@ public sealed class SupabaseService : IDisposable
     private readonly EncryptionService _encryption;
 
     private static string SupabaseUrl =>
-        Preferences.Get("supabase_url", "https://accisrkoevfqqiwglswe.supabase.co");
+        Preferences.Get("supabase_url", "https://zlhcseovfjilzgxdkskw.supabase.co");
 
     private static string AnonKey =>
         Preferences.Get("supabase_anon_key",
-            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFjY2lzcmtvZXZmcXFpd2dsc3dlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzMjAzNzQsImV4cCI6MjA5NDg5NjM3NH0.xJWT0Ft5PE3b7F5UZ4DorYLTr3ykM5wU1LVuvt_RuXQ");
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpsaGNzZW92ZmppbHpneGRrc2t3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NTkxNjQsImV4cCI6MjA5NjIzNTE2NH0.tb8oMqMAHMoknDaY_1-GVvONYcG9YrjbnBcJFSJD0SI");
 
     private static string DeviceToken =>
         Preferences.Get("device_token", string.Empty);
