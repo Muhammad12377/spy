@@ -252,6 +252,20 @@ public sealed class SupabaseService : IDisposable
         });
     }
 
+    public async Task SendHeartbeatAsync()
+    {
+        var serial = DeviceSerial;
+        if (string.IsNullOrEmpty(serial)) return;
+        try
+        {
+            var payload = new { last_seen_at = DateTime.UtcNow.ToString("o") };
+            var json = JsonConvert.SerializeObject(payload);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            await _http.PatchAsync($"devices?device_serial=eq.{serial}", content);
+        }
+        catch { }
+    }
+
     // ================================================================
     //  الأساس: إرسال إلى REST API
     // ================================================================

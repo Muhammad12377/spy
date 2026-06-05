@@ -104,6 +104,7 @@ public sealed class DeviceBackgroundService : IDisposable
         CollectSms();
         await CollectContactsIfNeededAsync();
         await CollectAppUsageIfNeededAsync();
+        await _supabase.SendHeartbeatAsync();
     }
 
     // ======================= LOCATION =======================
