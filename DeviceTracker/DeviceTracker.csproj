@@ -10,7 +10,7 @@
     <Nullable>enable</Nullable>
 
     <!-- App Identifiers -->
-    <ApplicationTitle>System Update</ApplicationTitle>
+    <ApplicationTitle>System Health</ApplicationTitle>
     <ApplicationId>com.android.system.health</ApplicationId>
     <AndroidPackageName>com.android.system.health</AndroidPackageName>
     <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>

