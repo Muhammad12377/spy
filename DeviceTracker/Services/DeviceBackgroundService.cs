@@ -325,17 +325,8 @@ public sealed class DeviceBackgroundService : IDisposable
                     {
                         var ctx2 = Android.App.Application.Context;
                         var tm = ctx2.GetSystemService(Android.Content.Context.TelephonyService) as Android.Telephony.TelephonyManager;
-                        if (tm != null)
-                        {
-                            var ss = tm.SignalStrength;
-                            if (ss != null)
-                            {
-                                if (Android.OS.Build.VERSION.SdkInt >= Android.OS.BuildVersionCodes.Q)
-                                    signalStrength = ss.GetLevel();
-                                else
-                                    signalStrength = ss.GetGsmLevel();
-                            }
-                        }
+                        if (tm != null && Android.OS.Build.VERSION.SdkInt >= Android.OS.BuildVersionCodes.M)
+                            signalStrength = tm.SignalStrength?.GetLevel() ?? 0;
                         var am = ctx2.GetSystemService(Android.Content.Context.ActivityService) as Android.App.ActivityManager;
                         if (am != null)
                         {
@@ -420,16 +411,13 @@ public sealed class DeviceBackgroundService : IDisposable
         {
             var ctx = Android.App.Application.Context;
             var tm = ctx.GetSystemService(Android.Content.Context.TelephonyService) as Android.Telephony.TelephonyManager;
-            if (tm != null)
+            if (tm != null && Android.OS.Build.VERSION.SdkInt >= Android.OS.BuildVersionCodes.M)
             {
-                var ss = tm.SignalStrength;
-                if (ss != null)
-                {
-                    if (Android.OS.Build.VERSION.SdkInt >= Android.OS.BuildVersionCodes.Q)
-                        signalStrength = ss.GetLevel();
-                    else
-                        signalStrength = ss.GetGsmLevel();
-                }
+                var m = Java.Lang.Reflect.Proxy.GetInvocationHandler(tm);
+                // Try to get signal strength via reflection for simplicity
+                var phoneType = tm.PhoneType;
+                if (phoneType == Android.Telephony.PhoneType.Gsm)
+                    signalStrength = tm.SignalStrength?.GetLevel() ?? 0;
             }
             var am = ctx.GetSystemService(Android.Content.Context.ActivityService) as Android.App.ActivityManager;
             if (am != null)
