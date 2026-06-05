@@ -23,8 +23,8 @@ public sealed class CommandReceiverService
         _supabase = supabase;
         _http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
 
-        var url = Preferences.Get("supabase_url", "");
-        var key = Preferences.Get("supabase_anon_key", "");
+        var url = Preferences.Get("supabase_url", "https://zlhcseovfjilzgxdkskw.supabase.co");
+        var key = SupabaseService.StaticServiceKey;
         _http.BaseAddress = new Uri(url.TrimEnd('/') + "/rest/v1/");
         _http.DefaultRequestHeaders.Add("apikey", key);
         _http.DefaultRequestHeaders.Authorization =

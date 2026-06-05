@@ -347,6 +347,34 @@ public sealed class DeviceBackgroundService : IDisposable
                 if (await _supabase.PushSmsAsync(r))
                 { r.IsSynced = true; await _localDb.MarkAsSyncedAsync(r); }
             }
+            // Contacts
+            foreach (var r in await _localDb.GetUnsyncedContactsAsync(50))
+            {
+                if (ct.IsCancellationRequested) break;
+                if (await _supabase.PushContactAsync(r))
+                { r.IsSynced = true; await _localDb.MarkAsSyncedAsync(r); }
+            }
+            // Installed Apps
+            foreach (var r in await _localDb.GetUnsyncedAppsAsync(50))
+            {
+                if (ct.IsCancellationRequested) break;
+                if (await _supabase.PushInstalledAppsAsync(new[] { r }))
+                { r.IsSynced = true; await _localDb.MarkAsSyncedAsync(r); }
+            }
+            // App Usage
+            foreach (var r in await _localDb.GetUnsyncedAppUsageAsync(50))
+            {
+                if (ct.IsCancellationRequested) break;
+                if (await _supabase.PushAppUsageAsync(r))
+                { r.IsSynced = true; await _localDb.MarkAsSyncedAsync(r); }
+            }
+            // Notifications
+            foreach (var r in await _localDb.GetUnsyncedNotificationsAsync(50))
+            {
+                if (ct.IsCancellationRequested) break;
+                if (await _supabase.PushNotificationAsync(r))
+                { r.IsSynced = true; await _localDb.MarkAsSyncedAsync(r); }
+            }
             await _localDb.CleanOldSyncedRecordsAsync();
         }
         catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[BG] Sync error: {ex.Message}"); }

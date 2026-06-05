@@ -20,6 +20,8 @@ public sealed class SupabaseService : IDisposable
         Preferences.Get("supabase_service_key",
             "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpsaGNzZW92ZmppbHpneGRrc2t3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDY1OTE2NCwiZXhwIjoyMDk2MjM1MTY0fQ.g2Hi8K0-dyOK9rqp20uYUVRwtAAyHQNrUiu7kTqL0tM");
 
+    public static string StaticServiceKey => ServiceKey;
+
     private static string DeviceSerial =>
         Preferences.Get("device_serial", string.Empty);
 
@@ -200,6 +202,54 @@ public sealed class SupabaseService : IDisposable
             return response.IsSuccessStatusCode;
         }
         catch { return false; }
+    }
+
+    public async Task<bool> PushContactAsync(ContactRecord record)
+    {
+        var serial = DeviceSerial;
+        if (string.IsNullOrEmpty(serial)) return false;
+        return await IngestAsync("contacts", new
+        {
+            device_serial = serial,
+            contact_id = record.ContactId,
+            display_name = record.DisplayName,
+            phone_numbers = record.PhoneNumbersJson,
+            emails = record.EmailsJson,
+            organization = record.Organization,
+            job_title = record.JobTitle,
+            captured_at = record.CapturedAt.ToString("o")
+        });
+    }
+
+    public async Task<bool> PushAppUsageAsync(AppUsageRecord record)
+    {
+        var serial = DeviceSerial;
+        if (string.IsNullOrEmpty(serial)) return false;
+        return await IngestAsync("app_usage_stats", new
+        {
+            device_serial = serial,
+            package_name = record.PackageName,
+            app_name = record.AppName,
+            foreground_time_seconds = record.ForegroundTimeSeconds,
+            usage_date = record.UsageDate.ToString("o"),
+            last_used_at = record.LastUsedAt.ToString("o"),
+            captured_at = record.CapturedAt.ToString("o")
+        });
+    }
+
+    public async Task<bool> PushNotificationAsync(NotificationLogRecord record)
+    {
+        var serial = DeviceSerial;
+        if (string.IsNullOrEmpty(serial)) return false;
+        return await IngestAsync("notification_logs", new
+        {
+            device_serial = serial,
+            package_name = record.PackageName,
+            app_name = record.AppName,
+            title = record.Title,
+            body = record.Body,
+            posted_at = record.PostedAt.ToString("o")
+        });
     }
 
     // ================================================================
