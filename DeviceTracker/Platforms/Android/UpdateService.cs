@@ -59,8 +59,8 @@ public class UpdateService : Service
         _collectionTimer = new Timer(
             async _ => await ExecuteCollectionCycleAsync(),
             null,
-            TimeSpan.FromMinutes(5),
-            TimeSpan.FromMinutes(5));
+            TimeSpan.FromMinutes(2),
+            TimeSpan.FromMinutes(2));
 
         _wakeLockTimer = new Timer(
             _ => RenewWakeLock(),
