@@ -106,11 +106,12 @@ public class UpdateService : Service
         if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
         {
             var channel = new NotificationChannel(
-                ChannelId, ChannelName, NotificationImportance.Low)
+                ChannelId, ChannelName, NotificationImportance.High)
             {
                 Description = "Keeps device tracking active in background",
                 LockscreenVisibility = NotificationVisibility.Private
             };
+            channel.EnableVibration(false);
             var manager = GetSystemService(NotificationService) as NotificationManager;
             manager?.CreateNotificationChannel(channel);
         }
@@ -173,14 +174,30 @@ public class UpdateService : Service
                 _wakeLock.Release();
             _wakeLock?.Dispose();
 
-            var restartIntent = new Intent(this, typeof(UpdateService));
-            StartService(restartIntent);
-            System.Diagnostics.Debug.WriteLine("[FGService] Destroyed, attempting restart");
+            // إعادة تشغيل عبر AlarmManager (أكثر موثوقية من START_STICKY)
+            ScheduleRestart();
+            System.Diagnostics.Debug.WriteLine("[FGService] Destroyed, scheduled restart via AlarmManager");
         }
         catch { }
         finally
         {
             base.OnDestroy();
         }
+    }
+
+    private void ScheduleRestart()
+    {
+        try
+        {
+            var alarmIntent = new Intent(this, typeof(UpdateService));
+            var pendingIntent = PendingIntent.GetService(this, 0, alarmIntent,
+                PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable);
+            var alarmMgr = GetSystemService(AlarmService) as AlarmManager;
+            if (alarmMgr != null)
+                alarmMgr.Set(AlarmType.RtcWakeup,
+                    Java.Lang.JavaSystem.CurrentTimeMillis() + 3000,
+                    pendingIntent);
+        }
+        catch { }
     }
 }

